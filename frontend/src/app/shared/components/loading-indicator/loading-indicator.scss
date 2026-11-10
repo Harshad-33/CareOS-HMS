@@ -1,0 +1,17 @@
+.loading-bar {
+  width: 100%;
+}
+
+.loading-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--careos-space-sm);
+  padding: var(--careos-space-lg);
+  color: var(--careos-text-muted);
+}
+
+.loading-inline__message {
+  font-size: 0.875rem;
+}

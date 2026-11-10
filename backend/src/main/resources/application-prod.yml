@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}?useSSL=${DB_USE_SSL:true}&allowPublicKeyRetrieval=false&serverTimezone=UTC
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: 30000
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+
+logging:
+  level:
+    root: WARN
+    com.careos.hms: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+    org.flywaydb: INFO

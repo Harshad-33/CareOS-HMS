@@ -1,0 +1,41 @@
+.careos-btn {
+  border-radius: var(--careos-radius-sm) !important;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.careos-form-field {
+  width: 100%;
+
+  .mat-mdc-text-field-wrapper {
+    background-color: var(--careos-surface-card);
+  }
+}
+
+.careos-surface-card {
+  background-color: var(--careos-surface-card);
+  border: 1px solid var(--careos-border-subtle);
+  border-radius: var(--careos-radius-md);
+  box-shadow: none !important;
+}
+
+.careos-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  &--up {
+    background-color: var(--careos-success-bg);
+    color: var(--careos-success-fg);
+  }
+
+  &--down {
+    background-color: var(--careos-error-tint);
+    color: var(--mat-sys-error);
+  }
+}

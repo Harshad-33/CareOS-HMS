@@ -1,11 +1,11 @@
 # CareOS-HMS
 
-CareOS-HMS is a modular Hospital Management System built with Angular, Spring Boot, and MySQL 8.
+CareOS-HMS is a modular Hospital Management System built with Angular 21, Spring Boot 3.5.x (Java 21), and MySQL 8.
 
 ## Technology Stack
 
-- **Frontend:** Angular 21, TypeScript, Angular Material, npm
-- **Backend:** Java 21, Spring Boot 3.5.x, Spring Web, Spring Data JPA / Hibernate, Bean Validation, Maven
+- **Frontend:** Angular 21, TypeScript (strict mode), Angular Material 21, Vitest, npm
+- **Backend:** Java 21, Spring Boot 3.5.x, Spring Web, Spring Data JPA / Hibernate 6, Bean Validation, SpringDoc OpenAPI (Swagger UI), Maven
 - **Database & Migrations:** MySQL 8, Flyway
 - **Containerization:** Docker, Docker Compose
 - **Version Control:** Git & GitHub
@@ -14,17 +14,27 @@ CareOS-HMS is a modular Hospital Management System built with Angular, Spring Bo
 
 ```text
 CareOS/
-├── frontend/               # Angular + Angular Material application
-├── backend/                # Spring Boot Maven API service
+├── frontend/               # Modular Angular + Angular Material application
+├── backend/                # Modular monolith Spring Boot Maven API service
 ├── database/
-│   └── migrations/         # Flyway SQL migration scripts
+│   └── migrations/         # Flyway SQL migration scripts (V*.sql)
 ├── docker/                 # Development Dockerfiles
-├── docs/                   # Project & architecture documentation
+├── docs/                   # Architecture, API, DB, and engineering guidelines
 ├── .env.example            # Environment variable template
+├── .dockerignore
 ├── .gitignore
-├── docker-compose.yml      # Local MySQL and full-stack container setup
+├── docker-compose.yml      # Isolated MySQL and full-stack container setup
 └── README.md
 ```
+
+## Documentation Index
+
+- [Architecture Overview & Multi-Hospital Strategy](docs/architecture-overview.md)
+- [Backend Architecture](docs/backend-architecture.md)
+- [Frontend Architecture](docs/frontend-architecture.md)
+- [Database Architecture & Auditing Standards](docs/database-architecture.md)
+- [API Standards & Versioning](docs/api-standards.md)
+- [Development & Testing Guidelines](docs/development-guidelines.md)
 
 ## Prerequisites
 
@@ -37,27 +47,13 @@ CareOS/
 
 ## Environment Configuration
 
-Copy `.env.example` to `.env` and update the credentials for your local environment:
+Copy `.env.example` to `.env` and set local credentials:
 
 ```bash
 cp .env.example .env
 ```
 
-Never commit `.env` or real credentials to Git.
-
-## MySQL Configuration
-
-1. Ensure MySQL 8 is running (locally or via Docker Compose).
-2. Create the database schema `careos_hms` if running MySQL outside Docker:
-
-   ```sql
-   CREATE DATABASE IF NOT EXISTS careos_hms
-     CHARACTER SET utf8mb4
-     COLLATE utf8mb4_unicode_ci;
-   ```
-
-3. Set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, and `DB_PASSWORD` in `.env` (or export them as environment variables).
-4. Flyway is enabled by default and reads migrations from `database/migrations/` and `classpath:db/migration`.
+Never commit `.env` or real credentials to Git. Spring Boot reads environment variables from the OS environment and optional `.env` files, with profile-specific overrides in `application-dev.yml` and `application-prod.yml`.
 
 ## Backend Setup (`backend/`)
 
@@ -67,17 +63,18 @@ mvn clean test
 mvn spring-boot:run
 ```
 
-Verify the health endpoint once the server is running:
-
-```bash
-curl http://localhost:8080/api/v1/health
-```
+Useful local endpoints (default `dev` profile):
+- **Health Check:** `http://localhost:8080/api/v1/health`
+- **Swagger UI:** `http://localhost:8080/swagger-ui.html`
+- **OpenAPI Spec:** `http://localhost:8080/v3/api-docs/v1`
 
 ## Frontend Setup (`frontend/`)
 
 ```bash
 cd frontend
 npm install
+npm test -- --watch=false
+npm run build
 npm start
 ```
 
@@ -85,19 +82,24 @@ The Angular development server runs at `http://localhost:4200`.
 
 ## Docker Setup
 
-Docker Compose uses dedicated default host ports (`3308` for MySQL, `8081` for Backend, `4201` for Frontend) to avoid conflicts with local `MySQL80` (`3306`) or other running stacks. You can customize them via `DOCKER_DB_PORT`, `DOCKER_BACKEND_PORT`, and `DOCKER_FRONTEND_PORT` in `.env`.
+Docker Compose uses dedicated default host ports (`3308` for MySQL, `8081` for Backend, `4201` for Frontend) bound to `127.0.0.1` so it coexists safely alongside local `MySQL80` (`3306`) or other stacks.
 
-Start only MySQL 8 for local development (recommended when running backend and frontend natively):
+Start only MySQL 8 for local native development:
 
 ```bash
 docker compose up -d mysql
 ```
 
-Or run the full stack (MySQL, backend, and frontend) in containers:
+Or run the full containerized stack (MySQL, backend, and frontend):
 
 ```bash
 docker compose --profile full up -d --build
 ```
+
+When running the Dockerized full stack:
+- **Frontend:** `http://localhost:4201`
+- **Backend Health:** `http://localhost:8081/api/v1/health`
+- **Swagger UI:** `http://localhost:8081/swagger-ui.html`
 
 Stop CareOS-HMS containers:
 

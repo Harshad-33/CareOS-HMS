@@ -1,0 +1,15 @@
+.confirm-dialog__title {
+  display: flex;
+  align-items: center;
+  gap: var(--careos-space-sm);
+}
+
+.confirm-dialog__content {
+  min-width: 300px;
+  color: var(--careos-text-muted);
+  line-height: 1.5;
+}
+
+.confirm-dialog__actions {
+  gap: var(--careos-space-sm);
+}

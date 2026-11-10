@@ -1,0 +1,16 @@
+<div class="error-state" role="alert">
+  <div class="error-state__icon-wrap">
+    <mat-icon class="error-state__icon" aria-hidden="true">error_outline</mat-icon>
+  </div>
+  <h2 class="error-state__title">{{ title() }}</h2>
+  <p class="error-state__message">{{ message() }}</p>
+  @if (correlationId()) {
+    <p class="error-state__reference">Reference ID: {{ correlationId() }}</p>
+  }
+  @if (retryLabel()) {
+    <button mat-flat-button color="primary" type="button" class="careos-btn" (click)="retry.emit()">
+      <mat-icon aria-hidden="true">refresh</mat-icon>
+      <span>{{ retryLabel() }}</span>
+    </button>
+  }
+</div>

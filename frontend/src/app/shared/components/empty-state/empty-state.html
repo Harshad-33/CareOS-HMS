@@ -1,0 +1,14 @@
+<div class="empty-state" role="region" [attr.aria-label]="title()">
+  <div class="empty-state__icon-wrap">
+    <mat-icon class="empty-state__icon" aria-hidden="true">{{ icon() }}</mat-icon>
+  </div>
+  <h2 class="empty-state__title">{{ title() }}</h2>
+  @if (description()) {
+    <p class="empty-state__description">{{ description() }}</p>
+  }
+  @if (actionLabel()) {
+    <button mat-stroked-button color="primary" type="button" class="careos-btn" (click)="action.emit()">
+      {{ actionLabel() }}
+    </button>
+  }
+</div>

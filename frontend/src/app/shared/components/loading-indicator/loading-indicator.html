@@ -1,0 +1,12 @@
+@if (mode() === 'bar') {
+  <div class="loading-bar" role="status" aria-live="polite" [attr.aria-label]="message()">
+    <mat-progress-bar mode="indeterminate" />
+  </div>
+} @else {
+  <div class="loading-inline" role="status" aria-live="polite">
+    <mat-progress-spinner mode="indeterminate" [diameter]="diameter()" />
+    @if (message()) {
+      <span class="loading-inline__message">{{ message() }}</span>
+    }
+  </div>
+}

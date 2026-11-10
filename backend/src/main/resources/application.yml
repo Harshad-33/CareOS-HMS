@@ -1,6 +1,8 @@
 spring:
   application:
     name: ${APP_NAME:careos-hms-backend}
+  profiles:
+    default: dev
   config:
     import: optional:file:.env[.properties],optional:file:../.env[.properties]
   datasource:
@@ -14,7 +16,8 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
-        format_sql: true
+        jdbc:
+          time_zone: UTC
   flyway:
     enabled: ${FLYWAY_ENABLED:true}
     baseline-on-migrate: true
@@ -24,7 +27,15 @@ spring:
 server:
   port: ${BACKEND_PORT:8080}
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+
 app:
   version: 0.1.0-SNAPSHOT
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:4201}

@@ -1,5 +1,6 @@
 package com.careos.hms.config;
 
+import com.careos.hms.common.constants.ApiConstants;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -13,10 +14,11 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
+        registry.addMapping(ApiConstants.API_V1_BASE_PATH + "/**")
                 .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
+                .exposedHeaders(ApiConstants.CORRELATION_ID_HEADER)
                 .allowCredentials(true);
     }
 }

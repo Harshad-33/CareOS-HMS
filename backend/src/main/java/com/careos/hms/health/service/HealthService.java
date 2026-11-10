@@ -1,6 +1,8 @@
 package com.careos.hms.health.service;
 
 import com.careos.hms.health.dto.HealthResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +14,7 @@ import java.time.Instant;
 @Service
 public class HealthService {
 
+    private static final Logger log = LoggerFactory.getLogger(HealthService.class);
     private static final int DB_VALIDATION_TIMEOUT_SECONDS = 2;
 
     private final DataSource dataSource;
@@ -46,6 +49,7 @@ public class HealthService {
         try (Connection connection = dataSource.getConnection()) {
             return connection.isValid(DB_VALIDATION_TIMEOUT_SECONDS);
         } catch (SQLException ex) {
+            log.error("Database connectivity check failed during health probe: {}", ex.getSQLState());
             return false;
         }
     }

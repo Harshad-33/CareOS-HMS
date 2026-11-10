@@ -1,0 +1,19 @@
+<section class="module-placeholder">
+  <app-page-header
+    [title]="data.moduleName"
+    [subtitle]="data.description"
+    [badge]="data.targetPhase"
+  />
+
+  <app-empty-state
+    [icon]="data.moduleIcon || 'layers'"
+    [title]="data.moduleName + ' Module Boundary Ready'"
+    [description]="
+      'This lazy-loaded module slot is established in Phase 1. Business workflows and data models will be introduced in ' +
+      data.targetPhase +
+      '.'
+    "
+    actionLabel="Return to Workspace Overview"
+    (action)="returnToWorkspace()"
+  />
+</section>

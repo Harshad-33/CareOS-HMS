@@ -1,0 +1,25 @@
+<h2 mat-dialog-title class="confirm-dialog__title">
+  <mat-icon [color]="data.severity === 'warn' ? 'warn' : 'primary'" aria-hidden="true">
+    {{ data.severity === 'warn' ? 'warning_amber' : 'help_outline' }}
+  </mat-icon>
+  <span>{{ data.title }}</span>
+</h2>
+
+<mat-dialog-content class="confirm-dialog__content">
+  <p>{{ data.message }}</p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="confirm-dialog__actions">
+  <button mat-stroked-button type="button" class="careos-btn" (click)="cancel()">
+    {{ data.cancelLabel || 'Cancel' }}
+  </button>
+  <button
+    mat-flat-button
+    [color]="data.severity === 'warn' ? 'warn' : 'primary'"
+    type="button"
+    class="careos-btn"
+    (click)="confirm()"
+  >
+    {{ data.confirmLabel || 'Confirm' }}
+  </button>
+</mat-dialog-actions>

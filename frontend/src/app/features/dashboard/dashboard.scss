@@ -1,0 +1,36 @@
+.foundation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--careos-space-md);
+}
+
+.card-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--careos-space-sm);
+  padding-top: var(--careos-space-md);
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--careos-space-sm);
+  padding: var(--careos-space-xs) 0;
+  border-bottom: 1px solid var(--careos-border-subtle);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.detail-row__label {
+  font-size: 0.875rem;
+  color: var(--careos-text-muted);
+}
+
+.detail-row__value {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--careos-text-primary);
+}

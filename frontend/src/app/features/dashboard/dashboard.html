@@ -1,0 +1,93 @@
+<section class="dashboard-page">
+  <app-page-header
+    title="System Foundation Overview"
+    subtitle="Core application shell, shared UI components, and live API connectivity verification."
+    badge="Phase 1"
+  >
+    <button
+      page-actions
+      mat-stroked-button
+      color="primary"
+      type="button"
+      class="careos-btn"
+      (click)="confirmRefresh()"
+    >
+      <mat-icon aria-hidden="true">refresh</mat-icon>
+      <span>Check System Health</span>
+    </button>
+  </app-page-header>
+
+  @if (loading()) {
+    <mat-card class="careos-surface-card">
+      <mat-card-content>
+        <app-loading-indicator message="Checking backend API and MySQL connectivity..." />
+      </mat-card-content>
+    </mat-card>
+  } @else if (error(); as err) {
+    <app-error-state
+      title="Backend Connectivity Check Failed"
+      [message]="err.message"
+      [correlationId]="err.correlationId || ''"
+      retryLabel="Retry Health Check"
+      (retry)="loadSystemHealth()"
+    />
+  } @else if (health(); as status) {
+    <div class="foundation-grid">
+      <mat-card class="careos-surface-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar aria-hidden="true">dns</mat-icon>
+          <mat-card-title>Backend API Service</mat-card-title>
+          <mat-card-subtitle>{{ status.service }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="card-details">
+          <div class="detail-row">
+            <span class="detail-row__label">Status</span>
+            <span
+              class="careos-status-pill"
+              [class.careos-status-pill--up]="status.status === 'UP'"
+              [class.careos-status-pill--down]="status.status !== 'UP'"
+            >
+              {{ status.status }}
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-row__label">Version</span>
+            <span class="detail-row__value">{{ status.version | safeEmpty }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-row__label">Checked At</span>
+            <span class="detail-row__value">{{ status.timestamp | date: 'medium' }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="careos-surface-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar aria-hidden="true">storage</mat-icon>
+          <mat-card-title>Database Connectivity</mat-card-title>
+          <mat-card-subtitle>MySQL 8 + Flyway</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="card-details">
+          <div class="detail-row">
+            <span class="detail-row__label">Database Status</span>
+            <span
+              class="careos-status-pill"
+              [class.careos-status-pill--up]="status.database === 'UP'"
+              [class.careos-status-pill--down]="status.database !== 'UP'"
+            >
+              {{ status.database }}
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-row__label">Schema Mode</span>
+            <span class="detail-row__value">Flyway Baseline Validated</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-row__label">Tenancy Model</span>
+            <span class="detail-row__value">Multi-Hospital Architecture Ready</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  }
+</section>

@@ -1,0 +1,37 @@
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--mat-sys-surface-container-lowest);
+}
+
+.app-toolbar {
+  gap: 12px;
+}
+
+.brand-icon {
+  font-size: 24px;
+}
+
+.brand-title {
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.environment-label {
+  font-size: 0.875rem;
+  opacity: 0.85;
+}
+
+.app-content {
+  flex: 1 1 auto;
+  padding: 24px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}

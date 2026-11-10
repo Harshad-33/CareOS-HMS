@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: ${APP_NAME:careos-hms-backend}
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:careos_hms}?useSSL=${DB_USE_SSL:false}&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: true
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration,filesystem:../database/migrations}
+    fail-on-missing-locations: false
+
+server:
+  port: ${BACKEND_PORT:8080}
+
+app:
+  version: 0.1.0-SNAPSHOT
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}

@@ -85,6 +85,8 @@ The Angular development server runs at `http://localhost:4200`.
 
 ## Docker Setup
 
+Docker Compose uses dedicated default host ports (`3308` for MySQL, `8081` for Backend, `4201` for Frontend) to avoid conflicts with local `MySQL80` (`3306`) or other running stacks. You can customize them via `DOCKER_DB_PORT`, `DOCKER_BACKEND_PORT`, and `DOCKER_FRONTEND_PORT` in `.env`.
+
 Start only MySQL 8 for local development (recommended when running backend and frontend natively):
 
 ```bash
@@ -94,13 +96,13 @@ docker compose up -d mysql
 Or run the full stack (MySQL, backend, and frontend) in containers:
 
 ```bash
-docker compose --profile full up --build
+docker compose --profile full up -d --build
 ```
 
-Stop containers:
+Stop CareOS-HMS containers:
 
 ```bash
-docker compose down
+docker compose --profile full down
 ```
 
 ## GitHub Repository

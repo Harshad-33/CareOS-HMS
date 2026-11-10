@@ -27,6 +27,9 @@ All runtime secrets and environment-specific settings are supplied via environme
 | `CORS_ALLOWED_ORIGINS` | Allowed CORS origins for `/api/**` | `http://localhost:4200` |
 | `FLYWAY_ENABLED` | Enable/disable Flyway migrations | `true` |
 | `FLYWAY_LOCATIONS` | Comma-separated Flyway locations | `classpath:db/migration,filesystem:../database/migrations` |
+| `DOCKER_DB_PORT` | Host port mapped to Docker MySQL (`3306`) | `3308` |
+| `DOCKER_BACKEND_PORT` | Host port mapped to Docker Backend (`8080`) | `8081` |
+| `DOCKER_FRONTEND_PORT` | Host port mapped to Docker Frontend (`4200`) | `4201` |
 
 ## Health Check Endpoint
 

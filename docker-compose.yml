@@ -5,11 +5,11 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${DB_NAME:-careos_hms}
-      MYSQL_USER: ${DB_USERNAME:?DB_USERNAME must be set in .env}
+      MYSQL_USER: ${DOCKER_MYSQL_USER:-careos_app}
       MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD must be set in .env}
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "127.0.0.1:${DOCKER_DB_PORT:-3308}:3306"
     volumes:
       - careos_mysql_data:/var/lib/mysql
     healthcheck:
@@ -33,21 +33,27 @@ services:
         condition: service_healthy
     environment:
       APP_NAME: ${APP_NAME:-careos-hms-backend}
-      BACKEND_PORT: ${BACKEND_PORT:-8080}
+      BACKEND_PORT: 8080
       DB_HOST: mysql
       DB_PORT: 3306
       DB_NAME: ${DB_NAME:-careos_hms}
       DB_USERNAME: ${DB_USERNAME:?DB_USERNAME must be set in .env}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       DB_USE_SSL: ${DB_USE_SSL:-false}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
+      CORS_ALLOWED_ORIGINS: ${DOCKER_CORS_ALLOWED_ORIGINS:-http://localhost:4200,http://localhost:4201}
       FLYWAY_ENABLED: ${FLYWAY_ENABLED:-true}
       FLYWAY_LOCATIONS: classpath:db/migration,filesystem:/database/migrations
     ports:
-      - "${BACKEND_PORT:-8080}:8080"
+      - "127.0.0.1:${DOCKER_BACKEND_PORT:-8081}:8080"
     volumes:
       - ./backend/src:/app/src
       - ./database/migrations:/database/migrations
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     networks:
       - careos-network
 
@@ -59,11 +65,18 @@ services:
     profiles: ["full"]
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
-      - "${FRONTEND_PORT:-4200}:4200"
+      - "127.0.0.1:${DOCKER_FRONTEND_PORT:-4201}:4200"
     volumes:
       - ./frontend/src:/app/src
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4200').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - careos-network
 

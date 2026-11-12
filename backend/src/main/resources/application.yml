@@ -39,3 +39,34 @@ app:
   version: 0.1.0-SNAPSHOT
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:4201}
+
+careos:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:}
+      issuer: ${JWT_ISSUER:careos-hms}
+      access-token-expiration-seconds: ${JWT_ACCESS_EXPIRATION_SECONDS:900}
+    refresh-token:
+      hmac-secret: ${REFRESH_TOKEN_HMAC_SECRET:}
+      session-expiration-seconds: ${REFRESH_SESSION_EXPIRATION_SECONDS:43200}
+      remember-me-expiration-seconds: ${REFRESH_REMEMBER_ME_EXPIRATION_SECONDS:604800}
+    cookie:
+      refresh-token-name: ${AUTH_REFRESH_COOKIE_NAME:careos_refresh_token}
+      csrf-token-name: ${AUTH_CSRF_COOKIE_NAME:careos_csrf_token}
+      path: /api/v1/auth
+      domain: ${AUTH_COOKIE_DOMAIN:}
+      secure: ${AUTH_COOKIE_SECURE:false}
+      same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
+    login:
+      bcrypt-strength: ${SECURITY_BCRYPT_STRENGTH:12}
+      max-failed-attempts: ${AUTH_MAX_FAILED_ATTEMPTS:5}
+      lockout-duration-minutes: ${AUTH_LOCKOUT_DURATION_MINUTES:15}
+      rate-limit-max-attempts: ${AUTH_RATE_LIMIT_MAX_ATTEMPTS:20}
+      rate-limit-window-seconds: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
+    bootstrap:
+      enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
+      username: ${BOOTSTRAP_ADMIN_USERNAME:}
+      email: ${BOOTSTRAP_ADMIN_EMAIL:}
+      password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+      first-name: ${BOOTSTRAP_ADMIN_FIRST_NAME:Platform}
+      last-name: ${BOOTSTRAP_ADMIN_LAST_NAME:Administrator}

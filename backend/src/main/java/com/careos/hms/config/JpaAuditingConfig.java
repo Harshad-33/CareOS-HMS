@@ -1,10 +1,14 @@
 package com.careos.hms.config;
 
 import com.careos.hms.common.constants.ApiConstants;
+import com.careos.hms.security.CareOsUserPrincipal;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.Optional;
 
@@ -14,7 +18,19 @@ public class JpaAuditingConfig {
 
     @Bean
     public AuditorAware<String> auditorProvider() {
-        // Phase 2 will resolve the authenticated user principal from the security context.
-        return () -> Optional.of(ApiConstants.SYSTEM_AUDITOR);
+        return () -> {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null
+                    || !authentication.isAuthenticated()
+                    || authentication instanceof AnonymousAuthenticationToken) {
+                return Optional.of(ApiConstants.SYSTEM_AUDITOR);
+            }
+            if (authentication.getPrincipal() instanceof CareOsUserPrincipal principal) {
+                return Optional.of(principal.getUsername());
+            }
+            return Optional.ofNullable(authentication.getName())
+                    .filter(name -> !name.isBlank())
+                    .or(() -> Optional.of(ApiConstants.SYSTEM_AUDITOR));
+        };
     }
 }

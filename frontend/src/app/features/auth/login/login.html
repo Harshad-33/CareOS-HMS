@@ -1,0 +1,101 @@
+<div class="login-page">
+  <mat-card class="careos-surface-card login-card">
+    <div class="login-card__brand">
+      <div class="login-card__logo">
+        <mat-icon aria-hidden="true">local_hospital</mat-icon>
+      </div>
+      <div>
+        <h1 class="login-card__title">{{ appName }}</h1>
+        <p class="login-card__subtitle">{{ appSubtitle }}</p>
+      </div>
+    </div>
+
+    <div class="login-card__heading">
+      <h2>Sign in to your workspace</h2>
+      <p>Authorized hospital staff and platform administrators only.</p>
+    </div>
+
+    @if (sessionExpiredNotice(); as expiredMsg) {
+      <div class="login-banner login-banner--warning" role="status">
+        <mat-icon aria-hidden="true">schedule</mat-icon>
+        <span>{{ expiredMsg }}</span>
+      </div>
+    }
+
+    @if (errorMessage(); as error) {
+      <div class="login-banner login-banner--error" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span>{{ error }}</span>
+      </div>
+    }
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form" novalidate>
+      <mat-form-field appearance="outline" class="careos-form-field">
+        <mat-label>Username or Email</mat-label>
+        <input
+          matInput
+          formControlName="usernameOrEmail"
+          appTrimInput
+          autocomplete="username"
+          placeholder="e.g. superadmin or admin@hospital.org"
+        />
+        <mat-icon matPrefix aria-hidden="true">person_outline</mat-icon>
+        @if (loginForm.controls.usernameOrEmail.touched && loginForm.controls.usernameOrEmail.hasError('required')) {
+          <mat-error>Username or email is required</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="careos-form-field">
+        <mat-label>Password</mat-label>
+        <input
+          matInput
+          [type]="hidePassword() ? 'password' : 'text'"
+          formControlName="password"
+          autocomplete="current-password"
+        />
+        <mat-icon matPrefix aria-hidden="true">lock_outline</mat-icon>
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          (click)="togglePasswordVisibility()"
+          [attr.aria-label]="hidePassword() ? 'Show password' : 'Hide password'"
+        >
+          <mat-icon aria-hidden="true">{{ hidePassword() ? 'visibility' : 'visibility_off' }}</mat-icon>
+        </button>
+        @if (loginForm.controls.password.touched && loginForm.controls.password.hasError('required')) {
+          <mat-error>Password is required</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="login-form__options">
+        <mat-checkbox formControlName="rememberMe" color="primary">
+          Keep me signed in on this trusted device (7 days)
+        </mat-checkbox>
+      </div>
+
+      <button
+        mat-flat-button
+        color="primary"
+        type="submit"
+        class="careos-btn login-form__submit"
+        [disabled]="submitting()"
+      >
+        @if (submitting()) {
+          <mat-spinner diameter="18" aria-label="Signing in" />
+          <span>Signing In...</span>
+        } @else {
+          <ng-container>
+            <mat-icon aria-hidden="true">login</mat-icon>
+            <span>Sign In</span>
+          </ng-container>
+        }
+      </button>
+    </form>
+
+    <p class="login-card__security-note">
+      <mat-icon aria-hidden="true">verified_user</mat-icon>
+      <span>Sessions use HttpOnly cookie rotation and strict tenant isolation.</span>
+    </p>
+  </mat-card>
+</div>

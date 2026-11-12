@@ -1,8 +1,8 @@
 <section class="dashboard-page">
   <app-page-header
     title="System Foundation Overview"
-    subtitle="Core application shell, shared UI components, and live API connectivity verification."
-    badge="Phase 1"
+    subtitle="Authenticated security context, RBAC scope verification, and live API connectivity."
+    badge="Phase 2"
   >
     <button
       page-actions
@@ -88,6 +88,36 @@
           </div>
         </mat-card-content>
       </mat-card>
+
+      @if (currentUser(); as user) {
+        <mat-card class="careos-surface-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar aria-hidden="true">verified_user</mat-icon>
+            <mat-card-title>Security &amp; Tenant Context</mat-card-title>
+            <mat-card-subtitle>{{ user.username }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content class="card-details">
+            <div class="detail-row">
+              <span class="detail-row__label">Scope</span>
+              <span class="detail-row__value">{{ user.userScope }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-row__label">Tenant Assignment</span>
+              <span class="detail-row__value">
+                {{ user.hospitalName || (user.userScope === 'PLATFORM' ? 'Platform Global' : '—') }}
+              </span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-row__label">Assigned Roles</span>
+              <span class="detail-row__value">{{ user.roles.join(', ') | safeEmpty }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-row__label">Granted Permissions</span>
+              <span class="detail-row__value">{{ user.permissions.length }} active</span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
     </div>
   }
 </section>

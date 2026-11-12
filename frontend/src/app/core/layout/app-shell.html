@@ -19,7 +19,42 @@
 
     <span class="shell-header__spacer"></span>
 
-    <span class="shell-header__phase-chip">Phase 1 Foundation</span>
+    @if (currentUser(); as user) {
+      <span class="shell-header__tenant-chip">{{ tenantLabel() }}</span>
+
+      <button
+        mat-button
+        type="button"
+        [matMenuTriggerFor]="userMenu"
+        class="shell-user-trigger"
+        aria-label="Account menu"
+      >
+        <mat-icon aria-hidden="true">account_circle</mat-icon>
+        <span class="shell-user-trigger__name">{{ user.fullName }}</span>
+        <mat-icon aria-hidden="true">arrow_drop_down</mat-icon>
+      </button>
+
+      <mat-menu #userMenu="matMenu" xPosition="before">
+        <div class="user-menu-summary">
+          <div class="user-menu-summary__name">{{ user.fullName }}</div>
+          <div class="user-menu-summary__meta">{{ user.email }}</div>
+          <div class="user-menu-summary__role">{{ primaryRoleLabel() }}</div>
+        </div>
+        <mat-divider />
+        <button mat-menu-item type="button" (click)="openChangePasswordDialog()">
+          <mat-icon aria-hidden="true">password</mat-icon>
+          <span>Change Password</span>
+        </button>
+        <button mat-menu-item type="button" (click)="confirmLogout()">
+          <mat-icon aria-hidden="true">logout</mat-icon>
+          <span>Sign Out</span>
+        </button>
+        <button mat-menu-item type="button" (click)="confirmLogoutAll()">
+          <mat-icon aria-hidden="true">devices_other</mat-icon>
+          <span>Sign Out All Devices</span>
+        </button>
+      </mat-menu>
+    }
   </mat-toolbar>
 
   @if (isLoading()) {
@@ -37,7 +72,7 @@
       aria-label="Primary navigation"
     >
       <nav class="sidebar-nav">
-        @for (group of navGroups; track group.label) {
+        @for (group of navGroups(); track group.label) {
           <div class="sidebar-group">
             <div class="sidebar-group__label">{{ group.label }}</div>
             <mat-nav-list class="sidebar-group__list">

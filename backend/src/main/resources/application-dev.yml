@@ -17,3 +17,9 @@ logging:
     com.careos.hms: DEBUG
     org.flywaydb: INFO
     org.hibernate.SQL: INFO
+
+careos:
+  security:
+    cookie:
+      secure: ${AUTH_COOKIE_SECURE:false}
+      same-site: ${AUTH_COOKIE_SAME_SITE:Lax}

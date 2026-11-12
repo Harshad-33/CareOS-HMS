@@ -22,3 +22,25 @@ springdoc:
 logging:
   level:
     com.careos.hms: DEBUG
+
+careos:
+  security:
+    jwt:
+      secret: test-only-careos-hms-jwt-signing-key-minimum-32-bytes-long
+      issuer: careos-hms-test
+      access-token-expiration-seconds: 900
+    refresh-token:
+      hmac-secret: test-only-careos-hms-refresh-hmac-pepper-minimum-32-bytes
+      session-expiration-seconds: 3600
+      remember-me-expiration-seconds: 86400
+    cookie:
+      secure: false
+      same-site: Lax
+    login:
+      bcrypt-strength: 4
+      max-failed-attempts: 5
+      lockout-duration-minutes: 15
+      rate-limit-max-attempts: 100
+      rate-limit-window-seconds: 60
+    bootstrap:
+      enabled: false

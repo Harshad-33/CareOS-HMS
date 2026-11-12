@@ -18,7 +18,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .exposedHeaders(ApiConstants.CORRELATION_ID_HEADER)
+                .exposedHeaders(ApiConstants.CORRELATION_ID_HEADER, ApiConstants.CSRF_TOKEN_HEADER)
                 .allowCredentials(true);
     }
 }

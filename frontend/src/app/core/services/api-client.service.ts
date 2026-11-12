@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 
 export interface RequestOptions {
   params?: Record<string, string | number | boolean | null | undefined>;
+  withCredentials?: boolean;
 }
 
 @Injectable({
@@ -17,30 +18,35 @@ export class ApiClientService {
   get<T>(endpoint: string, options?: RequestOptions): Observable<T> {
     return this.http.get<T>(this.buildUrl(endpoint), {
       params: this.toHttpParams(options?.params),
+      withCredentials: options?.withCredentials,
     });
   }
 
   post<T, B = unknown>(endpoint: string, body: B, options?: RequestOptions): Observable<T> {
     return this.http.post<T>(this.buildUrl(endpoint), body, {
       params: this.toHttpParams(options?.params),
+      withCredentials: options?.withCredentials,
     });
   }
 
   put<T, B = unknown>(endpoint: string, body: B, options?: RequestOptions): Observable<T> {
     return this.http.put<T>(this.buildUrl(endpoint), body, {
       params: this.toHttpParams(options?.params),
+      withCredentials: options?.withCredentials,
     });
   }
 
   patch<T, B = unknown>(endpoint: string, body: B, options?: RequestOptions): Observable<T> {
     return this.http.patch<T>(this.buildUrl(endpoint), body, {
       params: this.toHttpParams(options?.params),
+      withCredentials: options?.withCredentials,
     });
   }
 
   delete<T>(endpoint: string, options?: RequestOptions): Observable<T> {
     return this.http.delete<T>(this.buildUrl(endpoint), {
       params: this.toHttpParams(options?.params),
+      withCredentials: options?.withCredentials,
     });
   }
 

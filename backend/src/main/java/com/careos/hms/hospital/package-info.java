@@ -1,7 +1,8 @@
 /**
- * Multi-hospital tenant management module boundary.
+ * Multi-hospital tenant module.
  * <p>
- * Phase 1 status: Architectural placeholder only. Hospital registration and tenant configuration
- * will be implemented in designated future phases.
+ * Phase 2 provides only the minimal {@code Hospital} identity entity and repository
+ * required for user foreign-key integrity and tenant-aware authorization.
+ * Full hospital registration and administration belong to Phase 3.
  */
 package com.careos.hms.hospital;

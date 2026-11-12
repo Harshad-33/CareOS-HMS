@@ -1,13 +1,21 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import {
+  ApplicationConfig,
+  inject,
+  provideAppInitializer,
+  provideBrowserGlobalErrorListeners,
+} from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
-import { httpFoundationInterceptor } from './core/interceptors/http-foundation.interceptor';
 import { routes } from './app.routes';
+import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { httpFoundationInterceptor } from './core/interceptors/http-foundation.interceptor';
+import { AuthService } from './core/services/auth.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withInterceptors([httpFoundationInterceptor])),
+    provideHttpClient(withInterceptors([httpFoundationInterceptor, authInterceptor])),
+    provideAppInitializer(() => inject(AuthService).restoreSession()),
   ],
 };

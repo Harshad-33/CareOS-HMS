@@ -5,7 +5,7 @@ CareOS-HMS is a modular Hospital Management System built with Angular 21, Spring
 ## Technology Stack
 
 - **Frontend:** Angular 21, TypeScript (strict mode), Angular Material 21, Vitest, npm
-- **Backend:** Java 21, Spring Boot 3.5.x, Spring Web, Spring Data JPA / Hibernate 6, Bean Validation, SpringDoc OpenAPI (Swagger UI), Maven
+- **Backend:** Java 21, Spring Boot 3.5.x, Spring Security 6, JJWT (HS256), Spring Web, Spring Data JPA / Hibernate 6, Bean Validation, SpringDoc OpenAPI (Swagger UI), Maven
 - **Database & Migrations:** MySQL 8, Flyway
 - **Containerization:** Docker, Docker Compose
 - **Version Control:** Git & GitHub
@@ -35,6 +35,11 @@ CareOS/
 - [Database Architecture & Auditing Standards](docs/database-architecture.md)
 - [API Standards & Versioning](docs/api-standards.md)
 - [Development & Testing Guidelines](docs/development-guidelines.md)
+- [Authentication Architecture](docs/authentication-architecture.md)
+- [Security Architecture](docs/security-architecture.md)
+- [Authorization & RBAC](docs/authorization-and-rbac.md)
+- [Multi-Tenant Security](docs/multi-tenant-security.md)
+- [Authentication API Reference](docs/authentication-api.md)
 
 ## Prerequisites
 

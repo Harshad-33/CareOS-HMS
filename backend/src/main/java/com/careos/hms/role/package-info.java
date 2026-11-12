@@ -1,7 +1,4 @@
 /**
- * Role management module boundary.
- * <p>
- * Phase 1 status: Architectural placeholder only. RBAC role definitions will be implemented
- * in designated future phases.
+ * Role-Based Access Control (RBAC) role definitions and user-role assignment module.
  */
 package com.careos.hms.role;

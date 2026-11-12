@@ -13,6 +13,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -155,6 +157,36 @@ public class GlobalExceptionHandler {
                 HttpStatus.SERVICE_UNAVAILABLE,
                 "DATABASE_UNAVAILABLE",
                 "Database operation is temporarily unavailable",
+                request,
+                null
+        );
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+            AuthenticationException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Authentication failure at {}: {}", request.getRequestURI(), ex.getClass().getSimpleName());
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED,
+                "UNAUTHORIZED",
+                "Authentication is required to access this resource",
+                request,
+                null
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(
+            AccessDeniedException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Authorization denied at {}: {}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                "ACCESS_DENIED",
+                "You do not have permission to perform this action",
                 request,
                 null
         );

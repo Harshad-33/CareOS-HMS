@@ -6,6 +6,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { NormalizedHttpError } from '../../core/interceptors/http-foundation.interceptor';
 import { HealthStatus } from '../../core/models/health-status.model';
+import { AuthStateService } from '../../core/services/auth-state.service';
 import { HealthService } from '../../core/services/health.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog';
@@ -33,12 +34,14 @@ import { SafeEmptyPipe } from '../../shared/pipes/safe-empty.pipe';
 })
 export class DashboardComponent implements OnInit {
   private readonly healthService = inject(HealthService);
+  private readonly authState = inject(AuthStateService);
   private readonly dialog = inject(MatDialog);
   private readonly notificationService = inject(NotificationService);
 
   readonly loading = signal(true);
   readonly health = signal<HealthStatus | null>(null);
   readonly error = signal<NormalizedHttpError | null>(null);
+  readonly currentUser = this.authState.currentUser;
 
   ngOnInit(): void {
     this.loadSystemHealth();

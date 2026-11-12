@@ -1,7 +1,4 @@
 /**
- * Fine-grained permission management module boundary.
- * <p>
- * Phase 1 status: Architectural placeholder only. Permission assignment and authorization policies
- * will be implemented in designated future phases.
+ * Fine-grained permission definitions and role-permission mapping module.
  */
 package com.careos.hms.permission;

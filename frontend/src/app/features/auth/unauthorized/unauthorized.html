@@ -1,0 +1,15 @@
+<section class="unauthorized-page">
+  <app-page-header
+    title="Access Restricted"
+    subtitle="You do not hold the required permissions or tenant scope for this module."
+    badge="403 Forbidden"
+  />
+
+  <app-empty-state
+    icon="gpp_bad"
+    title="Insufficient Permissions"
+    description="Your current role does not authorize access to this route. Contact your hospital or platform administrator if you require elevated privileges."
+    actionLabel="Return to Workspace"
+    (action)="returnToWorkspace()"
+  />
+</section>

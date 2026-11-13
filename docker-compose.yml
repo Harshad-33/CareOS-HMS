@@ -70,6 +70,7 @@ services:
     ports:
       - "127.0.0.1:${DOCKER_BACKEND_PORT:-8081}:8080"
     volumes:
+      - ./backend/pom.xml:/app/pom.xml
       - ./backend/src:/app/src
       - ./database/migrations:/database/migrations
     healthcheck:

@@ -81,4 +81,12 @@ export class AuthStateService {
     }
     return this.hasAnyPermission(requiredPermissions);
   }
+
+  isPlatformUser(): boolean {
+    return this.userScope() === 'PLATFORM';
+  }
+
+  isHospitalUser(): boolean {
+    return this.userScope() === 'HOSPITAL';
+  }
 }

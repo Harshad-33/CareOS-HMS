@@ -1,0 +1,141 @@
+.hospital-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.admin-card {
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  .search-input {
+    flex: 2;
+  }
+  .filter-select {
+    flex: 1;
+  }
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+}
+
+.code-badge {
+  font-family: monospace;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #0f172a;
+  display: inline-block;
+}
+
+.sub-text {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.status-chip {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  display: inline-block;
+
+  &.status-active,
+  &.status-verified {
+    background: #dcfce7;
+    color: #15803d;
+  }
+  &.status-suspended,
+  &.status-rejected {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+  &.status-inactive,
+  &.status-pending {
+    background: #fef3c7;
+    color: #b45309;
+  }
+}
+
+.primary-badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+
+.rejection-note {
+  display: block;
+  font-size: 11px;
+  color: #b91c1c;
+  margin-top: 2px;
+}
+
+.hospital-tabs {
+  margin-top: 16px;
+}
+
+.tab-card {
+  padding: 24px;
+  margin-top: 16px;
+}
+
+.tab-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+
+  h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+}
+
+.tab-form {
+  margin-top: 16px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+
+  @media (max-width: 700px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+}

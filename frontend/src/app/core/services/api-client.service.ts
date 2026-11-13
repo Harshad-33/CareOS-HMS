@@ -50,6 +50,13 @@ export class ApiClientService {
     });
   }
 
+  getBlob(endpoint: string): Observable<Blob> {
+    return this.http.get(this.buildUrl(endpoint), {
+      responseType: 'blob',
+    });
+  }
+
+
   private buildUrl(endpoint: string): string {
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     return `${this.baseUrl}${normalizedEndpoint}`;

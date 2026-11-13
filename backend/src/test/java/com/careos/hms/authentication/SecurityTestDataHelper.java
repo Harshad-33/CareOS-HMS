@@ -1,8 +1,14 @@
 package com.careos.hms.authentication;
 
+import com.careos.hms.audit.repository.AuditLogRepository;
 import com.careos.hms.authentication.repository.RefreshTokenRepository;
+import com.careos.hms.branch.repository.HospitalBranchRepository;
+import com.careos.hms.department.repository.DepartmentRepository;
 import com.careos.hms.hospital.entity.Hospital;
+import com.careos.hms.hospital.repository.HospitalContactRepository;
+import com.careos.hms.hospital.repository.HospitalDocumentRepository;
 import com.careos.hms.hospital.repository.HospitalRepository;
+import com.careos.hms.hospital.repository.HospitalSettingsRepository;
 import com.careos.hms.permission.entity.Permission;
 import com.careos.hms.permission.entity.PermissionCode;
 import com.careos.hms.permission.entity.PermissionScope;
@@ -35,6 +41,12 @@ public class SecurityTestDataHelper {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    private final HospitalSettingsRepository hospitalSettingsRepository;
+    private final HospitalDocumentRepository hospitalDocumentRepository;
+    private final HospitalContactRepository hospitalContactRepository;
+    private final DepartmentRepository departmentRepository;
+    private final HospitalBranchRepository hospitalBranchRepository;
+    private final AuditLogRepository auditLogRepository;
     private final HospitalRepository hospitalRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -45,6 +57,12 @@ public class SecurityTestDataHelper {
             UserRepository userRepository,
             RoleRepository roleRepository,
             PermissionRepository permissionRepository,
+            HospitalSettingsRepository hospitalSettingsRepository,
+            HospitalDocumentRepository hospitalDocumentRepository,
+            HospitalContactRepository hospitalContactRepository,
+            DepartmentRepository departmentRepository,
+            HospitalBranchRepository hospitalBranchRepository,
+            AuditLogRepository auditLogRepository,
             HospitalRepository hospitalRepository,
             PasswordEncoder passwordEncoder
     ) {
@@ -54,12 +72,24 @@ public class SecurityTestDataHelper {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
+        this.hospitalSettingsRepository = hospitalSettingsRepository;
+        this.hospitalDocumentRepository = hospitalDocumentRepository;
+        this.hospitalContactRepository = hospitalContactRepository;
+        this.departmentRepository = departmentRepository;
+        this.hospitalBranchRepository = hospitalBranchRepository;
+        this.auditLogRepository = auditLogRepository;
         this.hospitalRepository = hospitalRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
     public void resetSecurityTables() {
+        auditLogRepository.deleteAllInBatch();
+        departmentRepository.deleteAllInBatch();
+        hospitalBranchRepository.deleteAllInBatch();
+        hospitalContactRepository.deleteAllInBatch();
+        hospitalDocumentRepository.deleteAllInBatch();
+        hospitalSettingsRepository.deleteAllInBatch();
         refreshTokenRepository.deleteAllInBatch();
         userRoleRepository.deleteAllInBatch();
         rolePermissionRepository.deleteAllInBatch();
@@ -94,10 +124,18 @@ public class SecurityTestDataHelper {
         permissions.put(PermissionCode.PLATFORM_OVERVIEW_READ, createPerm(PermissionCode.PLATFORM_OVERVIEW_READ, "Read Platform Overview", "platform", PermissionScope.PLATFORM));
         permissions.put(PermissionCode.PLATFORM_HOSPITALS_MANAGE, createPerm(PermissionCode.PLATFORM_HOSPITALS_MANAGE, "Manage Hospitals", "platform", PermissionScope.PLATFORM));
         permissions.put(PermissionCode.PLATFORM_AUDIT_READ, createPerm(PermissionCode.PLATFORM_AUDIT_READ, "Read Platform Audit", "platform", PermissionScope.PLATFORM));
+        permissions.put(PermissionCode.PLATFORM_DOCUMENTS_VERIFY, createPerm(PermissionCode.PLATFORM_DOCUMENTS_VERIFY, "Verify Compliance Documents", "document", PermissionScope.PLATFORM));
+
         permissions.put(PermissionCode.HOSPITAL_WORKSPACE_READ, createPerm(PermissionCode.HOSPITAL_WORKSPACE_READ, "Read Hospital Workspace", "hospital", PermissionScope.HOSPITAL));
         permissions.put(PermissionCode.HOSPITAL_USERS_MANAGE, createPerm(PermissionCode.HOSPITAL_USERS_MANAGE, "Manage Hospital Users", "users", PermissionScope.HOSPITAL));
         permissions.put(PermissionCode.HOSPITAL_ROLES_READ, createPerm(PermissionCode.HOSPITAL_ROLES_READ, "Read Hospital Roles", "roles", PermissionScope.HOSPITAL));
         permissions.put(PermissionCode.HOSPITAL_SETTINGS_MANAGE, createPerm(PermissionCode.HOSPITAL_SETTINGS_MANAGE, "Manage Hospital Settings", "hospital", PermissionScope.HOSPITAL));
+        permissions.put(PermissionCode.HOSPITAL_DEPARTMENTS_MANAGE, createPerm(PermissionCode.HOSPITAL_DEPARTMENTS_MANAGE, "Manage Departments", "department", PermissionScope.HOSPITAL));
+        permissions.put(PermissionCode.HOSPITAL_BRANCHES_MANAGE, createPerm(PermissionCode.HOSPITAL_BRANCHES_MANAGE, "Manage Branches", "branch", PermissionScope.HOSPITAL));
+        permissions.put(PermissionCode.HOSPITAL_DOCUMENTS_MANAGE, createPerm(PermissionCode.HOSPITAL_DOCUMENTS_MANAGE, "Manage Documents", "document", PermissionScope.HOSPITAL));
+        permissions.put(PermissionCode.HOSPITAL_CONTACTS_MANAGE, createPerm(PermissionCode.HOSPITAL_CONTACTS_MANAGE, "Manage Contacts", "contact", PermissionScope.HOSPITAL));
+        permissions.put(PermissionCode.HOSPITAL_PROFILE_UPDATE, createPerm(PermissionCode.HOSPITAL_PROFILE_UPDATE, "Update Hospital Profile", "hospital", PermissionScope.HOSPITAL));
+        permissions.put(PermissionCode.HOSPITAL_AUDIT_READ, createPerm(PermissionCode.HOSPITAL_AUDIT_READ, "Read Hospital Audit", "audit", PermissionScope.HOSPITAL));
 
         for (String code : List.of(
                 PermissionCode.AUTH_ME_READ,
@@ -106,7 +144,8 @@ public class SecurityTestDataHelper {
                 PermissionCode.SYSTEM_HEALTH_VIEW,
                 PermissionCode.PLATFORM_OVERVIEW_READ,
                 PermissionCode.PLATFORM_HOSPITALS_MANAGE,
-                PermissionCode.PLATFORM_AUDIT_READ
+                PermissionCode.PLATFORM_AUDIT_READ,
+                PermissionCode.PLATFORM_DOCUMENTS_VERIFY
         )) {
             rolePermissionRepository.saveAndFlush(new RolePermission(superAdminRole, permissions.get(code)));
         }
@@ -119,7 +158,13 @@ public class SecurityTestDataHelper {
                 PermissionCode.HOSPITAL_WORKSPACE_READ,
                 PermissionCode.HOSPITAL_USERS_MANAGE,
                 PermissionCode.HOSPITAL_ROLES_READ,
-                PermissionCode.HOSPITAL_SETTINGS_MANAGE
+                PermissionCode.HOSPITAL_SETTINGS_MANAGE,
+                PermissionCode.HOSPITAL_DEPARTMENTS_MANAGE,
+                PermissionCode.HOSPITAL_BRANCHES_MANAGE,
+                PermissionCode.HOSPITAL_DOCUMENTS_MANAGE,
+                PermissionCode.HOSPITAL_CONTACTS_MANAGE,
+                PermissionCode.HOSPITAL_PROFILE_UPDATE,
+                PermissionCode.HOSPITAL_AUDIT_READ
         )) {
             rolePermissionRepository.saveAndFlush(new RolePermission(hospitalAdminRole, permissions.get(code)));
         }

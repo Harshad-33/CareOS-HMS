@@ -15,6 +15,20 @@ export class NotificationService {
     });
   }
 
+  success(message: string): void {
+    this.snackBar.open(message, 'Dismiss', {
+      duration: APP_CONSTANTS.defaultSnackbarDurationMs,
+      panelClass: ['careos-snackbar-success'],
+    });
+  }
+
+  warn(message: string): void {
+    this.snackBar.open(message, 'Dismiss', {
+      duration: APP_CONSTANTS.defaultSnackbarDurationMs + 500,
+      panelClass: ['careos-snackbar-warn'],
+    });
+  }
+
   error(message: string): void {
     this.snackBar.open(message, 'Close', {
       duration: APP_CONSTANTS.defaultSnackbarDurationMs + 1500,

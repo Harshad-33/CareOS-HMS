@@ -110,7 +110,7 @@ export const NAVIGATION_ITEMS: readonly NavItem[] = [
     route: '/hospital',
     icon: 'domain',
     section: 'administration',
-    phaseTag: 'Planned',
     requiredPermissions: [PERMISSIONS.PLATFORM_HOSPITALS_MANAGE, PERMISSIONS.HOSPITAL_WORKSPACE_READ],
   },
 ];
+

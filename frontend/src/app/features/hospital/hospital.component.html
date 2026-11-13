@@ -1,0 +1,586 @@
+<div class="hospital-page">
+  <app-page-header
+    [title]="isPlatformAdmin() ? 'Platform Hospital Administration' : 'Hospital Management & Governance'"
+    [subtitle]="isPlatformAdmin()
+      ? 'Global hospital tenant onboarding, accreditation review, operational status governance, and platform auditing.'
+      : 'Comprehensive tenant configuration, facility settings, clinical departments, branch locations, and compliance documents.'"
+  >
+    @if (isPlatformAdmin()) {
+      <button mat-flat-button color="primary" routerLink="/hospital/register">
+        <mat-icon>add_business</mat-icon>
+        Onboard New Hospital
+      </button>
+    }
+  </app-page-header>
+
+  @if (loading()) {
+    <app-loading-indicator message="Loading administration data..."></app-loading-indicator>
+  } @else {
+    <!-- PLATFORM SUPER ADMIN WORKSPACE -->
+    @if (isPlatformAdmin()) {
+      <mat-card class="admin-card">
+        <div class="filter-bar">
+          <mat-form-field appearance="outline" class="search-input">
+            <mat-label>Search hospitals</mat-label>
+            <input matInput #searchInput placeholder="Name, code, or city" (keyup.enter)="onSearch(searchInput.value)" />
+            <button mat-icon-button matSuffix (click)="onSearch(searchInput.value)">
+              <mat-icon>search</mat-icon>
+            </button>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-select">
+            <mat-label>Status Filter</mat-label>
+            <mat-select value="ALL" (selectionChange)="onFilterStatusChange($event.value)">
+              <mat-option value="ALL">All Statuses</mat-option>
+              <mat-option value="ACTIVE">ACTIVE</mat-option>
+              <mat-option value="SUSPENDED">SUSPENDED</mat-option>
+              <mat-option value="INACTIVE">INACTIVE</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        @if (hospitals().length === 0) {
+          <app-empty-state
+            title="No Hospitals Found"
+            message="No hospitals matching your search criteria were found."
+            icon="domain_disabled"
+          ></app-empty-state>
+        } @else {
+          <div class="table-container">
+            <table mat-table [dataSource]="hospitals()" class="mat-elevation-z1">
+              <ng-container matColumnDef="code">
+                <th mat-header-cell *matHeaderCellDef>Code</th>
+                <td mat-cell *matCellDef="let h">
+                  <span class="code-badge">{{ h.hospitalCode }}</span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef>Hospital Name</th>
+                <td mat-cell *matCellDef="let h">
+                  <strong>{{ h.name }}</strong>
+                  <span class="sub-text">{{ h.hospitalType }}</span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="location">
+                <th mat-header-cell *matHeaderCellDef>Location</th>
+                <td mat-cell *matCellDef="let h">
+                  {{ h.city || '-' }}, {{ h.state || '-' }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="regNumber">
+                <th mat-header-cell *matHeaderCellDef>Registration No</th>
+                <td mat-cell *matCellDef="let h">{{ h.registrationNumber || '-' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>Status</th>
+                <td mat-cell *matCellDef="let h">
+                  <span class="status-chip" [ngClass]="'status-' + h.status.toLowerCase()">
+                    {{ h.status }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Actions</th>
+                <td mat-cell *matCellDef="let h">
+                  <button mat-icon-button [matMenuTriggerFor]="hospMenu">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #hospMenu="matMenu">
+                    <button mat-menu-item (click)="openStatusDialog(h)">
+                      <mat-icon>published_with_changes</mat-icon>
+                      <span>Change Status</span>
+                    </button>
+                  </mat-menu>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="['code', 'name', 'location', 'regNumber', 'status', 'actions']"></tr>
+              <tr mat-row *matRowDef="let row; columns: ['code', 'name', 'location', 'regNumber', 'status', 'actions']"></tr>
+            </table>
+          </div>
+        }
+      </mat-card>
+    }
+
+    <!-- HOSPITAL ADMIN WORKSPACE -->
+    @if (isHospitalAdmin()) {
+      <mat-tab-group animationDuration="200ms" class="hospital-tabs">
+        <!-- Tab 1: Profile -->
+        <mat-tab label="Facility Profile">
+          <mat-card class="tab-card">
+            <mat-card-header>
+              <mat-card-title>Organization & Operational Profile</mat-card-title>
+              <mat-card-subtitle>
+                Code: <strong>{{ myHospital()?.hospitalCode }}</strong> |
+                Status: <span class="status-chip status-{{ myHospital()?.status?.toLowerCase() }}">{{ myHospital()?.status }}</span>
+              </mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="tab-form">
+                <div class="grid-2">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Hospital Name</mat-label>
+                    <input matInput formControlName="name" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Hospital Type</mat-label>
+                    <mat-select formControlName="hospitalType">
+                      <mat-option value="GENERAL">General Hospital</mat-option>
+                      <mat-option value="MULTI_SPECIALTY">Multi-Specialty</mat-option>
+                      <mat-option value="SUPER_SPECIALTY">Super-Specialty</mat-option>
+                      <mat-option value="CLINIC">Clinic</mat-option>
+                      <mat-option value="DIAGNOSTIC_CENTER">Diagnostic Center</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+
+                <div class="grid-2">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Official Email</mat-label>
+                    <input matInput type="email" formControlName="email" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Primary Contact Phone</mat-label>
+                    <input matInput formControlName="primaryContactNumber" />
+                  </mat-form-field>
+                </div>
+
+                <div class="grid-2">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Alternate Contact Phone</mat-label>
+                    <input matInput formControlName="alternateContactNumber" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Website URL</mat-label>
+                    <input matInput formControlName="website" />
+                  </mat-form-field>
+                </div>
+
+                <div class="grid-2">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Address Line 1</mat-label>
+                    <input matInput formControlName="addressLine1" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Address Line 2</mat-label>
+                    <input matInput formControlName="addressLine2" />
+                  </mat-form-field>
+                </div>
+
+                <div class="grid-3">
+                  <mat-form-field appearance="outline">
+                    <mat-label>City</mat-label>
+                    <input matInput formControlName="city" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>State</mat-label>
+                    <input matInput formControlName="state" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>PIN Code</mat-label>
+                    <input matInput formControlName="pinCode" />
+                  </mat-form-field>
+                </div>
+
+                <div class="form-actions">
+                  <button mat-flat-button color="primary" type="submit" [disabled]="profileForm.invalid">
+                    Save Profile Changes
+                  </button>
+                </div>
+              </form>
+            </mat-card-content>
+          </mat-card>
+        </mat-tab>
+
+        <!-- Tab 2: Settings -->
+        <mat-tab label="Operational Settings">
+          <mat-card class="tab-card">
+            <mat-card-header>
+              <mat-card-title>Tenant Operational Policies & Timing</mat-card-title>
+              <mat-card-subtitle>Configure appointment slots, operating days, timezone, and defaults.</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <form [formGroup]="settingsForm" (ngSubmit)="saveSettings()" class="tab-form">
+                <div class="grid-2">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Timezone</mat-label>
+                    <input matInput formControlName="timezone" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Currency</mat-label>
+                    <input matInput formControlName="currency" />
+                  </mat-form-field>
+                </div>
+
+                <div class="grid-2">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Working Hours Start</mat-label>
+                    <input matInput type="time" formControlName="workingHoursStart" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Working Hours End</mat-label>
+                    <input matInput type="time" formControlName="workingHoursEnd" />
+                  </mat-form-field>
+                </div>
+
+                <div class="grid-2">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Appointment Slot Duration (Minutes)</mat-label>
+                    <input matInput type="number" formControlName="appointmentSlotDurationMinutes" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Max Advance Booking Days</mat-label>
+                    <input matInput type="number" formControlName="maxAdvanceBookingDays" />
+                  </mat-form-field>
+                </div>
+
+                <div class="grid-2">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Emergency Contact Phone</mat-label>
+                    <input matInput formControlName="emergencyContactNumber" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Support Email</mat-label>
+                    <input matInput type="email" formControlName="supportEmail" />
+                  </mat-form-field>
+                </div>
+
+                <div class="form-actions">
+                  <button mat-flat-button color="primary" type="submit" [disabled]="settingsForm.invalid">
+                    Save Operational Settings
+                  </button>
+                </div>
+              </form>
+            </mat-card-content>
+          </mat-card>
+        </mat-tab>
+
+        <!-- Tab 3: Departments -->
+        <mat-tab label="Departments">
+          <mat-card class="tab-card">
+            <div class="tab-header-row">
+              <h3>Hospital Departments ({{ departments().length }})</h3>
+              <button mat-flat-button color="primary" (click)="openAddDepartmentDialog()">
+                <mat-icon>add</mat-icon>
+                Add Department
+              </button>
+            </div>
+
+            @if (departments().length === 0) {
+              <app-empty-state
+                title="No Departments Configured"
+                message="Add clinical and operational departments for your hospital (e.g. Cardiology, Radiology, Pediatrics)."
+                icon="local_hospital"
+              ></app-empty-state>
+            } @else {
+              <table mat-table [dataSource]="departments()" class="mat-elevation-z1">
+                <ng-container matColumnDef="code">
+                  <th mat-header-cell *matHeaderCellDef>Code</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="code-badge">{{ d.departmentCode }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="name">
+                  <th mat-header-cell *matHeaderCellDef>Name</th>
+                  <td mat-cell *matCellDef="let d">
+                    <strong>{{ d.departmentName }}</strong>
+                    @if (d.description) {
+                      <span class="sub-text">{{ d.description }}</span>
+                    }
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef>Status</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="status-chip" [ngClass]="'status-' + d.status.toLowerCase()">
+                      {{ d.status }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef>Actions</th>
+                  <td mat-cell *matCellDef="let d">
+                    <button mat-icon-button (click)="openEditDepartmentDialog(d)" matTooltip="Edit Department">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="toggleDepartmentStatus(d)" [matTooltip]="d.status === 'ACTIVE' ? 'Deactivate' : 'Activate'">
+                      <mat-icon>{{ d.status === 'ACTIVE' ? 'pause_circle' : 'play_circle' }}</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="confirmDeleteDepartment(d)" matTooltip="Delete Department">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="['code', 'name', 'status', 'actions']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['code', 'name', 'status', 'actions']"></tr>
+              </table>
+            }
+          </mat-card>
+        </mat-tab>
+
+        <!-- Tab 4: Branches -->
+        <mat-tab label="Branches & Locations">
+          <mat-card class="tab-card">
+            <div class="tab-header-row">
+              <h3>Hospital Branches ({{ branches().length }})</h3>
+              <button mat-flat-button color="primary" (click)="openAddBranchDialog()">
+                <mat-icon>add_location_alt</mat-icon>
+                Add Branch
+              </button>
+            </div>
+
+            @if (branches().length === 0) {
+              <app-empty-state
+                title="No Branches Added"
+                message="Register multiple physical branches, diagnostic centers, or satellite clinics under your hospital tenant."
+                icon="storefront"
+              ></app-empty-state>
+            } @else {
+              <table mat-table [dataSource]="branches()" class="mat-elevation-z1">
+                <ng-container matColumnDef="code">
+                  <th mat-header-cell *matHeaderCellDef>Code</th>
+                  <td mat-cell *matCellDef="let b">
+                    <span class="code-badge">{{ b.branchCode }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="name">
+                  <th mat-header-cell *matHeaderCellDef>Branch Name</th>
+                  <td mat-cell *matCellDef="let b">
+                    <strong>{{ b.branchName }}</strong>
+                    <span class="sub-text">{{ b.address || '-' }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="contact">
+                  <th mat-header-cell *matHeaderCellDef>Contact / City</th>
+                  <td mat-cell *matCellDef="let b">
+                    {{ b.city || '-' }} | {{ b.contactNumber || '-' }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef>Status</th>
+                  <td mat-cell *matCellDef="let b">
+                    <span class="status-chip" [ngClass]="'status-' + b.status.toLowerCase()">
+                      {{ b.status }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef>Actions</th>
+                  <td mat-cell *matCellDef="let b">
+                    <button mat-icon-button (click)="openEditBranchDialog(b)">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="toggleBranchStatus(b)">
+                      <mat-icon>{{ b.status === 'ACTIVE' ? 'pause_circle' : 'play_circle' }}</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="confirmDeleteBranch(b)">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="['code', 'name', 'contact', 'status', 'actions']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['code', 'name', 'contact', 'status', 'actions']"></tr>
+              </table>
+            }
+          </mat-card>
+        </mat-tab>
+
+        <!-- Tab 5: Contacts -->
+        <mat-tab label="Key Contacts">
+          <mat-card class="tab-card">
+            <div class="tab-header-row">
+              <h3>Emergency & Department Personnel ({{ contacts().length }})</h3>
+              <button mat-flat-button color="primary" (click)="openAddContactDialog()">
+                <mat-icon>person_add</mat-icon>
+                Add Contact
+              </button>
+            </div>
+
+            @if (contacts().length === 0) {
+              <app-empty-state
+                title="No Key Contacts"
+                message="Add medical superintendents, emergency in-charge, and administration contacts."
+                icon="contacts"
+              ></app-empty-state>
+            } @else {
+              <table mat-table [dataSource]="contacts()" class="mat-elevation-z1">
+                <ng-container matColumnDef="name">
+                  <th mat-header-cell *matHeaderCellDef>Name</th>
+                  <td mat-cell *matCellDef="let c">
+                    <strong>{{ c.name }}</strong>
+                    @if (c.primary) {
+                      <span class="primary-badge">PRIMARY</span>
+                    }
+                    <span class="sub-text">{{ c.designation || '-' }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="type">
+                  <th mat-header-cell *matHeaderCellDef>Type</th>
+                  <td mat-cell *matCellDef="let c">{{ c.contactType }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="phone">
+                  <th mat-header-cell *matHeaderCellDef>Phone / Email</th>
+                  <td mat-cell *matCellDef="let c">
+                    {{ c.phoneNumber }} <br />
+                    <span class="sub-text">{{ c.email || '-' }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef>Actions</th>
+                  <td mat-cell *matCellDef="let c">
+                    <button mat-icon-button (click)="openEditContactDialog(c)">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="confirmDeleteContact(c)">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="['name', 'type', 'phone', 'actions']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['name', 'type', 'phone', 'actions']"></tr>
+              </table>
+            }
+          </mat-card>
+        </mat-tab>
+
+        <!-- Tab 6: Documents -->
+        <mat-tab label="Compliance Documents">
+          <mat-card class="tab-card">
+            <div class="tab-header-row">
+              <h3>Legal & Accreditation Documents ({{ documents().length }})</h3>
+              <button mat-flat-button color="primary" (click)="openUploadDocumentDialog()">
+                <mat-icon>upload_file</mat-icon>
+                Upload Document
+              </button>
+            </div>
+
+            @if (documents().length === 0) {
+              <app-empty-state
+                title="No Compliance Documents"
+                message="Upload official hospital licenses, NABH certificates, or statutory clearances for platform verification."
+                icon="verified"
+              ></app-empty-state>
+            } @else {
+              <table mat-table [dataSource]="documents()" class="mat-elevation-z1">
+                <ng-container matColumnDef="type">
+                  <th mat-header-cell *matHeaderCellDef>Document Type</th>
+                  <td mat-cell *matCellDef="let d">
+                    <strong>{{ d.documentType }}</strong>
+                    <span class="sub-text">{{ d.documentName }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="size">
+                  <th mat-header-cell *matHeaderCellDef>Size</th>
+                  <td mat-cell *matCellDef="let d">
+                    {{ (d.fileSizeBytes / 1024).toFixed(1) }} KB
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="verification">
+                  <th mat-header-cell *matHeaderCellDef>Verification Status</th>
+                  <td mat-cell *matCellDef="let d">
+                    <span class="status-chip" [ngClass]="'status-' + d.verificationStatus.toLowerCase()">
+                      {{ d.verificationStatus }}
+                    </span>
+                    @if (d.rejectionReason) {
+                      <span class="rejection-note">Reason: {{ d.rejectionReason }}</span>
+                    }
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef>Actions</th>
+                  <td mat-cell *matCellDef="let d">
+                    <button mat-icon-button (click)="downloadDocument(d)" matTooltip="Download File">
+                      <mat-icon>download</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="confirmDeleteDocument(d)" matTooltip="Delete Document">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="['type', 'size', 'verification', 'actions']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['type', 'size', 'verification', 'actions']"></tr>
+              </table>
+            }
+          </mat-card>
+        </mat-tab>
+
+        <!-- Tab 7: Audits -->
+        <mat-tab label="Activity Audit">
+          <mat-card class="tab-card">
+            <div class="tab-header-row">
+              <h3>Hospital Administrative Activity Trail</h3>
+            </div>
+
+            @if (auditLogs().length === 0) {
+              <app-empty-state
+                title="No Audit Records"
+                message="No administrative actions logged yet for this hospital."
+                icon="history"
+              ></app-empty-state>
+            } @else {
+              <table mat-table [dataSource]="auditLogs()" class="mat-elevation-z1">
+                <ng-container matColumnDef="action">
+                  <th mat-header-cell *matHeaderCellDef>Action</th>
+                  <td mat-cell *matCellDef="let a">
+                    <span class="code-badge">{{ a.action }}</span>
+                    <span class="sub-text">{{ a.description }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="actor">
+                  <th mat-header-cell *matHeaderCellDef>Actor / IP</th>
+                  <td mat-cell *matCellDef="let a">
+                    <strong>{{ a.actorUsername }}</strong>
+                    <span class="sub-text">{{ a.clientIp || '-' }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="timestamp">
+                  <th mat-header-cell *matHeaderCellDef>Timestamp</th>
+                  <td mat-cell *matCellDef="let a">
+                    {{ a.timestamp | date:'medium' }}
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="['action', 'actor', 'timestamp']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['action', 'actor', 'timestamp']"></tr>
+              </table>
+            }
+          </mat-card>
+        </mat-tab>
+      </mat-tab-group>
+    }
+  }
+</div>

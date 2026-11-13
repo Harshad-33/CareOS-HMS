@@ -31,7 +31,12 @@ public record ApiResponse<T>(
         return ok(data, "Request processed successfully", path);
     }
 
+    public static <T> ApiResponse<T> created(T data, String message, String path) {
+        return ok(data, message, path);
+    }
+
     public static ApiResponse<Void> message(String message, String path) {
         return ok(null, message, path);
     }
 }
+

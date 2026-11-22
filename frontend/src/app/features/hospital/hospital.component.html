@@ -6,7 +6,7 @@
       : 'Comprehensive tenant configuration, facility settings, clinical departments, branch locations, and compliance documents.'"
   >
     @if (isPlatformAdmin()) {
-      <button mat-flat-button color="primary" routerLink="/hospital/register">
+      <button page-actions mat-flat-button color="primary" routerLink="/hospital/register">
         <mat-icon>add_business</mat-icon>
         Onboard New Hospital
       </button>
@@ -42,8 +42,10 @@
         @if (hospitals().length === 0) {
           <app-empty-state
             title="No Hospitals Found"
-            message="No hospitals matching your search criteria were found."
+            description="No hospitals matching your search criteria were found."
             icon="domain_disabled"
+            [actionLabel]="isPlatformAdmin() ? 'Onboard First Hospital' : ''"
+            (action)="navigateToRegister()"
           ></app-empty-state>
         } @else {
           <div class="table-container">

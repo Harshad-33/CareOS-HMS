@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -77,6 +77,7 @@ export class HospitalComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly notificationService = inject(NotificationService);
   private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
 
   readonly isPlatformAdmin = computed(() => this.authState.isPlatformUser());
   readonly isHospitalAdmin = computed(() => this.authState.isHospitalUser());
@@ -165,6 +166,10 @@ export class HospitalComponent implements OnInit {
   onSearch(query: string): void {
     this.hospitalSearchQuery.set(query.trim());
     this.loadPlatformHospitals();
+  }
+
+  navigateToRegister(): void {
+    void this.router.navigate(['/hospital/register']);
   }
 
   openStatusDialog(hospital: Hospital): void {

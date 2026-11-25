@@ -1,0 +1,534 @@
+<div class="registration-page">
+  <app-page-header
+    title="Register New Employee"
+    subtitle="Onboard hospital clinical or administrative staff, configure organizational assignments, and optionally provision system credentials."
+  >
+    <button page-actions mat-stroked-button (click)="cancel()">
+      <mat-icon>arrow_back</mat-icon>
+      Back to Directory
+    </button>
+  </app-page-header>
+
+  <mat-card class="form-card">
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <mat-stepper linear #stepper>
+          <!-- Step 1: Personal Information -->
+          <mat-step [stepControl]="personalGroup" label="Personal Information">
+            <div class="step-content" formGroupName="personal">
+              <h3>Demographics & Personal Details</h3>
+
+              <!-- Photo Upload & Preview -->
+              <div class="photo-upload-container">
+                <div class="photo-preview">
+                  @if (photoPreviewUrl()) {
+                    <img [src]="photoPreviewUrl()" alt="Profile photo preview" class="preview-img" />
+                  } @else {
+                    <div class="placeholder-avatar">
+                      <mat-icon>account_circle</mat-icon>
+                    </div>
+                  }
+                </div>
+                <div class="photo-actions">
+                  <input
+                    type="file"
+                    #fileInput
+                    (change)="onPhotoSelected($event)"
+                    accept="image/png, image/jpeg, image/webp"
+                    style="display: none"
+                  />
+                  <button mat-stroked-button type="button" (click)="fileInput.click()">
+                    <mat-icon>photo_camera</mat-icon>
+                    {{ photoPreviewUrl() ? 'Change Photo' : 'Upload Photo' }}
+                  </button>
+                  @if (photoPreviewUrl()) {
+                    <button mat-button color="warn" type="button" (click)="removePhoto()">
+                      <mat-icon>delete</mat-icon>
+                      Remove
+                    </button>
+                  }
+                  <span class="photo-hint">PNG, JPG or WebP. Max 10MB.</span>
+                </div>
+              </div>
+
+              <!-- Name Fields -->
+              <div class="grid-3">
+                <mat-form-field appearance="outline">
+                  <mat-label>First Name</mat-label>
+                  <input matInput formControlName="firstName" placeholder="e.g. John" />
+                  @if (personalGroup.get('firstName')?.hasError('required')) {
+                    <mat-error>First name is required</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Middle Name (Optional)</mat-label>
+                  <input matInput formControlName="middleName" placeholder="e.g. Robert" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Last Name</mat-label>
+                  <input matInput formControlName="lastName" placeholder="e.g. Smith" />
+                  @if (personalGroup.get('lastName')?.hasError('required')) {
+                    <mat-error>Last name is required</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+
+              <!-- Demographics -->
+              <div class="grid-3">
+                <mat-form-field appearance="outline">
+                  <mat-label>Date of Birth</mat-label>
+                  <input matInput type="date" formControlName="dateOfBirth" />
+                  @if (personalGroup.get('dateOfBirth')?.hasError('required')) {
+                    <mat-error>Date of birth is required</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Gender</mat-label>
+                  <mat-select formControlName="gender">
+                    <mat-option value="MALE">Male</mat-option>
+                    <mat-option value="FEMALE">Female</mat-option>
+                    <mat-option value="OTHER">Other</mat-option>
+                  </mat-select>
+                  @if (personalGroup.get('gender')?.hasError('required')) {
+                    <mat-error>Gender is required</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Blood Group (Optional)</mat-label>
+                  <mat-select formControlName="bloodGroup">
+                    <mat-option [value]="''">Not Specified</mat-option>
+                    <mat-option value="A_POSITIVE">A+</mat-option>
+                    <mat-option value="A_NEGATIVE">A-</mat-option>
+                    <mat-option value="B_POSITIVE">B+</mat-option>
+                    <mat-option value="B_NEGATIVE">B-</mat-option>
+                    <mat-option value="AB_POSITIVE">AB+</mat-option>
+                    <mat-option value="AB_NEGATIVE">AB-</mat-option>
+                    <mat-option value="O_POSITIVE">O+</mat-option>
+                    <mat-option value="O_NEGATIVE">O-</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <!-- Contact Information -->
+              <h3>Contact & Communication</h3>
+              <div class="grid-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Email Address</mat-label>
+                  <input matInput type="email" formControlName="email" placeholder="john.smith@hospital.com" />
+                  <mat-icon matPrefix>email</mat-icon>
+                  @if (personalGroup.get('email')?.hasError('required')) {
+                    <mat-error>Email is required</mat-error>
+                  }
+                  @if (personalGroup.get('email')?.hasError('email')) {
+                    <mat-error>Invalid email format</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Mobile Phone</mat-label>
+                  <input matInput formControlName="phoneNumber" placeholder="+91 98765 43210" />
+                  <mat-icon matPrefix>phone</mat-icon>
+                  @if (personalGroup.get('phoneNumber')?.hasError('required')) {
+                    <mat-error>Phone number is required</mat-error>
+                  }
+                  @if (personalGroup.get('phoneNumber')?.hasError('pattern')) {
+                    <mat-error>Invalid phone format</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+
+              <div class="grid-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Alternate Phone (Optional)</mat-label>
+                  <input matInput formControlName="alternatePhoneNumber" placeholder="+91 98765 00000" />
+                  <mat-icon matPrefix>phone</mat-icon>
+                </mat-form-field>
+              </div>
+
+              <!-- Residential Address -->
+              <h3>Residential Address</h3>
+              <div class="grid-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Address Line 1</mat-label>
+                  <input matInput formControlName="addressLine1" placeholder="Flat / House No., Street" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Address Line 2 (Optional)</mat-label>
+                  <input matInput formControlName="addressLine2" placeholder="Apartment, Landmark" />
+                </mat-form-field>
+              </div>
+
+              <div class="grid-4">
+                <mat-form-field appearance="outline">
+                  <mat-label>City</mat-label>
+                  <input matInput formControlName="city" placeholder="City" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>District</mat-label>
+                  <input matInput formControlName="district" placeholder="District" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>State</mat-label>
+                  <input matInput formControlName="state" placeholder="State" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>PIN / Postal Code</mat-label>
+                  <input matInput formControlName="pinCode" placeholder="PIN code" />
+                </mat-form-field>
+              </div>
+
+              <!-- Emergency Contact -->
+              <h3>Emergency Contact</h3>
+              <div class="grid-3">
+                <mat-form-field appearance="outline">
+                  <mat-label>Contact Person Name</mat-label>
+                  <input matInput formControlName="emergencyContactName" placeholder="e.g. Mary Smith" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Relationship</mat-label>
+                  <input matInput formControlName="emergencyContactRelation" placeholder="e.g. Spouse, Parent" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Emergency Phone</mat-label>
+                  <input matInput formControlName="emergencyContactPhone" placeholder="+91 98765 11111" />
+                </mat-form-field>
+              </div>
+
+              <div class="step-actions">
+                <button mat-flat-button color="primary" matStepperNext type="button">
+                  Next: Professional Details
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+              </div>
+            </div>
+          </mat-step>
+
+          <!-- Step 2: Professional Details -->
+          <mat-step [stepControl]="professionalGroup" label="Professional Details">
+            <div class="step-content" formGroupName="professional">
+              <h3>Employment & Assignment</h3>
+
+              <!-- Employee Code / ID Option -->
+              <div class="employee-id-section">
+                <mat-checkbox formControlName="autoGenerateCode" (change)="onAutoGenerateCodeToggle($event.checked)">
+                  Auto-generate Employee ID (e.g. EMP-2026-0001)
+                </mat-checkbox>
+
+                @if (!professionalGroup.get('autoGenerateCode')?.value) {
+                  <mat-form-field appearance="outline" class="code-field">
+                    <mat-label>Custom Employee Number</mat-label>
+                    <input matInput formControlName="employeeNumber" placeholder="e.g. EMP-CUSTOM-101" />
+                    <mat-hint>Must be unique within this hospital</mat-hint>
+                    @if (professionalGroup.get('employeeNumber')?.hasError('required')) {
+                      <mat-error>Employee number is required when auto-generation is disabled</mat-error>
+                    }
+                  </mat-form-field>
+                }
+              </div>
+
+              <div class="grid-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Designation / Job Title</mat-label>
+                  <input matInput formControlName="designation" placeholder="e.g. Senior Cardiologist, Charge Nurse" />
+                  <mat-icon matPrefix>work</mat-icon>
+                  @if (professionalGroup.get('designation')?.hasError('required')) {
+                    <mat-error>Designation is required</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Employment Type</mat-label>
+                  <mat-select formControlName="employmentType">
+                    <mat-option value="FULL_TIME">Full Time</mat-option>
+                    <mat-option value="PART_TIME">Part Time</mat-option>
+                    <mat-option value="CONTRACT">Contract</mat-option>
+                    <mat-option value="PROBATION">Probation</mat-option>
+                    <mat-option value="INTERN">Intern</mat-option>
+                    <mat-option value="VISITING_CONSULTANT">Visiting Consultant</mat-option>
+                  </mat-select>
+                  @if (professionalGroup.get('employmentType')?.hasError('required')) {
+                    <mat-error>Employment type is required</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+
+              <div class="grid-2">
+                <!-- Department Dropdown -->
+                <mat-form-field appearance="outline">
+                  <mat-label>Department</mat-label>
+                  <mat-select formControlName="departmentPublicId">
+                    @for (dept of departments(); track dept.publicId) {
+                      <mat-option [value]="dept.publicId">{{ dept.departmentName }} ({{ dept.departmentCode }})</mat-option>
+                    }
+                  </mat-select>
+                  <mat-icon matPrefix>domain</mat-icon>
+                  @if (professionalGroup.get('departmentPublicId')?.hasError('required')) {
+                    <mat-error>Department assignment is required</mat-error>
+                  }
+                </mat-form-field>
+
+                <!-- Branch Dropdown -->
+                <mat-form-field appearance="outline">
+                  <mat-label>Branch (Optional)</mat-label>
+                  <mat-select formControlName="branchPublicId">
+                    <mat-option [value]="''">Primary / Hospital Headquarters</mat-option>
+                    @for (br of branches(); track br.publicId) {
+                      <mat-option [value]="br.publicId">{{ br.branchName }} ({{ br.branchCode }})</mat-option>
+                    }
+                  </mat-select>
+                  <mat-icon matPrefix>store</mat-icon>
+                </mat-form-field>
+              </div>
+
+              <div class="grid-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Date of Joining</mat-label>
+                  <input matInput type="date" formControlName="joiningDate" />
+                  <mat-icon matPrefix>calendar_today</mat-icon>
+                  @if (professionalGroup.get('joiningDate')?.hasError('required')) {
+                    <mat-error>Joining date is required</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Reporting Manager (Optional)</mat-label>
+                  <mat-select formControlName="reportingManagerPublicId">
+                    <mat-option [value]="''">None (Reports directly to Administration)</mat-option>
+                    @for (mgr of managerOptions(); track mgr.publicId) {
+                      <mat-option [value]="mgr.publicId">{{ mgr.fullName }} ({{ mgr.designation }})</mat-option>
+                    }
+                  </mat-select>
+                  <mat-icon matPrefix>supervisor_account</mat-icon>
+                </mat-form-field>
+              </div>
+
+              <div class="step-actions">
+                <button mat-button matStepperPrevious type="button">
+                  <mat-icon>arrow_back</mat-icon>
+                  Back
+                </button>
+                <button mat-flat-button color="primary" matStepperNext type="button">
+                  Next: User Account
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+              </div>
+            </div>
+          </mat-step>
+
+          <!-- Step 3: Optional User Account -->
+          <mat-step [stepControl]="accountGroup" label="User Account (Optional)">
+            <div class="step-content" formGroupName="account">
+              <h3>System Credentials & Access</h3>
+
+              @if (!canLinkAccount()) {
+                <div class="permission-notice">
+                  <mat-icon>info</mat-icon>
+                  <span>You do not have administrative permission (<code>HOSPITAL_EMPLOYEES_ACCOUNT_LINK</code>) to provision login credentials. The employee will be registered as a staff profile only.</span>
+                </div>
+              } @else {
+                <div class="account-toggle-section">
+                  <mat-checkbox formControlName="createUserAccount" (change)="onAccountToggle($event.checked)">
+                    <strong>Provision a login account for this employee</strong>
+                  </mat-checkbox>
+                  <p class="account-subtitle">
+                    Enable this if the staff member requires access to log in to the CareOS application.
+                  </p>
+                </div>
+
+                @if (accountGroup.get('createUserAccount')?.value) {
+                  <div class="account-form-grid">
+                    <div class="grid-2">
+                      <mat-form-field appearance="outline">
+                        <mat-label>Username</mat-label>
+                        <input matInput formControlName="username" placeholder="e.g. dr.jsmith" />
+                        <mat-icon matPrefix>person</mat-icon>
+                        @if (accountGroup.get('username')?.hasError('required')) {
+                          <mat-error>Username is required</mat-error>
+                        }
+                        @if (accountGroup.get('username')?.hasError('minlength')) {
+                          <mat-error>Username must be at least 3 characters</mat-error>
+                        }
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline">
+                        <mat-label>Assign Role(s)</mat-label>
+                        <mat-select formControlName="roleCodes" multiple>
+                          <mat-option value="HOSPITAL_ADMIN">Hospital Administrator</mat-option>
+                        </mat-select>
+                        <mat-icon matPrefix>security</mat-icon>
+                      </mat-form-field>
+                    </div>
+
+                    <div class="grid-2">
+                      <mat-form-field appearance="outline">
+                        <mat-label>Initial Password</mat-label>
+                        <input
+                          matInput
+                          [type]="hidePassword() ? 'password' : 'text'"
+                          formControlName="password"
+                          placeholder="Min 12 chars (Upper, Lower, Number, Symbol)"
+                        />
+                        <button
+                          mat-icon-button
+                          matSuffix
+                          type="button"
+                          (click)="hidePassword.set(!hidePassword())"
+                          [attr.aria-label]="hidePassword() ? 'Show password' : 'Hide password'"
+                        >
+                          <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+                        </button>
+                        <mat-icon matPrefix>lock</mat-icon>
+                        <mat-hint>Must include uppercase, lowercase, number, and special character</mat-hint>
+                        @if (accountGroup.get('password')?.hasError('required')) {
+                          <mat-error>Password is required</mat-error>
+                        }
+                        @if (accountGroup.get('password')?.hasError('minlength')) {
+                          <mat-error>Password must be at least 12 characters</mat-error>
+                        }
+                        @if (accountGroup.get('password')?.hasError('pattern')) {
+                          <mat-error>Password does not meet complexity requirements</mat-error>
+                        }
+                      </mat-form-field>
+                    </div>
+                  </div>
+                }
+              }
+
+              <div class="step-actions">
+                <button mat-button matStepperPrevious type="button">
+                  <mat-icon>arrow_back</mat-icon>
+                  Back
+                </button>
+                <button mat-flat-button color="primary" matStepperNext type="button">
+                  Next: Review & Confirm
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+              </div>
+            </div>
+          </mat-step>
+
+          <!-- Step 4: Review & Submit -->
+          <mat-step label="Review & Submit">
+            <div class="step-content">
+              <h3>Review Employee Information</h3>
+              <p class="review-intro">Please confirm the details below before submitting the registration.</p>
+
+              <div class="review-grid">
+                <!-- Personal Review -->
+                <div class="review-card">
+                  <h4><mat-icon>person</mat-icon> Personal Information</h4>
+                  <div class="review-row">
+                    <span class="label">Full Name:</span>
+                    <span class="value">{{ getFullName() }}</span>
+                  </div>
+                  <div class="review-row">
+                    <span class="label">Gender / DOB:</span>
+                    <span class="value">{{ personalGroup.get('gender')?.value }} ({{ personalGroup.get('dateOfBirth')?.value }})</span>
+                  </div>
+                  <div class="review-row">
+                    <span class="label">Email:</span>
+                    <span class="value">{{ personalGroup.get('email')?.value }}</span>
+                  </div>
+                  <div class="review-row">
+                    <span class="label">Phone:</span>
+                    <span class="value">{{ personalGroup.get('phoneNumber')?.value }}</span>
+                  </div>
+                  @if (photoPreviewUrl()) {
+                    <div class="review-row">
+                      <span class="label">Photo:</span>
+                      <span class="value photo-attached"><mat-icon>image</mat-icon> Attached</span>
+                    </div>
+                  }
+                </div>
+
+                <!-- Professional Review -->
+                <div class="review-card">
+                  <h4><mat-icon>work</mat-icon> Professional Assignment</h4>
+                  <div class="review-row">
+                    <span class="label">Designation:</span>
+                    <span class="value">{{ professionalGroup.get('designation')?.value }}</span>
+                  </div>
+                  <div class="review-row">
+                    <span class="label">Department:</span>
+                    <span class="value">{{ getSelectedDepartmentName() }}</span>
+                  </div>
+                  <div class="review-row">
+                    <span class="label">Employment Type:</span>
+                    <span class="value">{{ professionalGroup.get('employmentType')?.value }}</span>
+                  </div>
+                  <div class="review-row">
+                    <span class="label">Employee ID:</span>
+                    <span class="value">{{ professionalGroup.get('autoGenerateCode')?.value ? 'Auto-generated on save' : professionalGroup.get('employeeNumber')?.value }}</span>
+                  </div>
+                  <div class="review-row">
+                    <span class="label">Joining Date:</span>
+                    <span class="value">{{ professionalGroup.get('joiningDate')?.value }}</span>
+                  </div>
+                </div>
+
+                <!-- Account Review -->
+                <div class="review-card">
+                  <h4><mat-icon>security</mat-icon> System Access</h4>
+                  @if (accountGroup.get('createUserAccount')?.value) {
+                    <div class="review-row">
+                      <span class="label">Login Account:</span>
+                      <span class="value badge-enabled">Enabled</span>
+                    </div>
+                    <div class="review-row">
+                      <span class="label">Username:</span>
+                      <span class="value">{{ accountGroup.get('username')?.value }}</span>
+                    </div>
+                    <div class="review-row">
+                      <span class="label">Assigned Roles:</span>
+                      <span class="value">{{ accountGroup.get('roleCodes')?.value?.join(', ') || 'None' }}</span>
+                    </div>
+                  } @else {
+                    <div class="review-row">
+                      <span class="label">Login Account:</span>
+                      <span class="value badge-disabled">No login account</span>
+                    </div>
+                    <p class="review-sub">A user account can be linked later at any time from the directory.</p>
+                  }
+                </div>
+              </div>
+
+              <div class="step-actions submit-actions">
+                <button mat-button matStepperPrevious type="button" [disabled]="submitting()">
+                  <mat-icon>arrow_back</mat-icon>
+                  Back
+                </button>
+                <button
+                  mat-flat-button
+                  color="primary"
+                  type="submit"
+                  [disabled]="form.invalid || submitting()"
+                  class="submit-button"
+                >
+                  <ng-container>
+                    @if (submitting()) {
+                      <mat-icon class="spinning">sync</mat-icon>
+                      <span>Registering Employee...</span>
+                    } @else {
+                      <mat-icon>check_circle</mat-icon>
+                      <span>Confirm & Register Employee</span>
+                    }
+                  </ng-container>
+                </button>
+              </div>
+            </div>
+          </mat-step>
+        </mat-stepper>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

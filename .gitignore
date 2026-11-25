@@ -54,3 +54,7 @@ desktop.ini
 *.swp
 *.swo
 *~
+
+# Uploaded documents / temp uploads
+uploads/
+**/uploads/

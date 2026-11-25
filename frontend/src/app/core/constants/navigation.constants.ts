@@ -94,8 +94,11 @@ export const NAVIGATION_ITEMS: readonly NavItem[] = [
     route: '/employees',
     icon: 'badge',
     section: 'administration',
-    phaseTag: 'Planned',
-    requiredPermissions: [PERMISSIONS.HOSPITAL_USERS_MANAGE],
+    requiredPermissions: [
+      PERMISSIONS.HOSPITAL_EMPLOYEES_READ,
+      PERMISSIONS.HOSPITAL_USERS_MANAGE,
+      PERMISSIONS.PLATFORM_EMPLOYEES_READ,
+    ],
   },
   {
     label: 'Users',

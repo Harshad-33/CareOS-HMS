@@ -1,0 +1,471 @@
+<div class="employee-profile-container">
+  @if (loading()) {
+    <div class="loading-state">
+      <mat-spinner diameter="48"></mat-spinner>
+      <p>Loading employee profile...</p>
+    </div>
+  } @else if (!employee()) {
+    <app-empty-state
+      icon="person_off"
+      title="Employee Not Found"
+      message="The requested employee record could not be found or has been deactivated."
+      actionLabel="Back to Employee Directory"
+      (action)="backToDirectory()"
+    ></app-empty-state>
+  } @else {
+    <!-- Page Header & Actions -->
+    <app-page-header
+      [title]="employee()!.fullName"
+      [subtitle]="employee()!.designation + ' • ' + (employee()!.departmentName || 'General Staff') + (employee()!.branchName ? ' (' + employee()!.branchName + ')' : '')"
+    >
+      <div page-actions class="header-action-buttons">
+        <button mat-stroked-button (click)="backToDirectory()">
+          <mat-icon>arrow_back</mat-icon>
+          Directory
+        </button>
+
+        @if (canManage()) {
+          <button mat-stroked-button color="primary" (click)="openEditDialog('personal')">
+            <mat-icon>edit</mat-icon>
+            Edit Profile
+          </button>
+        }
+
+        @if (canChangeStatus()) {
+          <button mat-stroked-button color="accent" (click)="openStatusDialog()">
+            <mat-icon>swap_horiz</mat-icon>
+            Change Status
+          </button>
+        }
+
+        @if (canLinkAccount()) {
+          <button mat-stroked-button (click)="openAccountDialog()">
+            <mat-icon>manage_accounts</mat-icon>
+            {{ employee()!.hasUserAccount ? 'Manage Account' : 'Link Account' }}
+          </button>
+        }
+
+        @if (canManage()) {
+          <button mat-stroked-button color="warn" (click)="confirmDelete()">
+            <mat-icon>delete</mat-icon>
+            Delete
+          </button>
+        }
+      </div>
+    </app-page-header>
+
+    <!-- Top Identity Card -->
+    <mat-card class="identity-card">
+      <div class="identity-layout">
+        <!-- Avatar & Photo Actions -->
+        <div class="avatar-column">
+          <div class="avatar-wrapper">
+            @if (profilePhotoUrl()) {
+              <img [src]="profilePhotoUrl()" [alt]="employee()!.fullName" class="profile-avatar-img" />
+            } @else {
+              <div class="avatar-placeholder">
+                <mat-icon>account_circle</mat-icon>
+              </div>
+            }
+          </div>
+
+          @if (canManage()) {
+            <div class="avatar-actions">
+              <input
+                type="file"
+                #fileInput
+                (change)="onPhotoSelected($event)"
+                accept="image/png, image/jpeg, image/webp"
+                style="display: none"
+              />
+              <button mat-stroked-button type="button" class="btn-sm" (click)="fileInput.click()">
+                <mat-icon>photo_camera</mat-icon>
+                {{ profilePhotoUrl() ? 'Change' : 'Upload' }}
+              </button>
+            </div>
+          }
+        </div>
+
+        <!-- Identity Details -->
+        <div class="identity-details">
+          <div class="identity-top">
+            <div class="name-badge-row">
+              <h2 class="employee-name">{{ employee()!.fullName }}</h2>
+              <span class="status-badge" [ngClass]="employee()!.status.toLowerCase()">
+                {{ employee()!.status }}
+              </span>
+              @if (employee()!.hasUserAccount) {
+                <span class="account-badge linked">
+                  <mat-icon>verified_user</mat-icon>
+                  Login Enabled
+                </span>
+              } @else {
+                <span class="account-badge unlinked">
+                  <mat-icon>no_accounts</mat-icon>
+                  Staff Only (No Login)
+                </span>
+              }
+            </div>
+            <div class="employee-code">ID: <strong>{{ employee()!.employeeNumber }}</strong></div>
+          </div>
+
+          <div class="meta-row">
+            <div class="meta-item">
+              <mat-icon>work</mat-icon>
+              <span>{{ employee()!.designation }}</span>
+            </div>
+            <div class="meta-item">
+              <mat-icon>domain</mat-icon>
+              <span>{{ employee()!.departmentName || 'Unassigned' }}</span>
+            </div>
+            <div class="meta-item">
+              <mat-icon>store</mat-icon>
+              <span>{{ employee()!.branchName || 'Headquarters / Main' }}</span>
+            </div>
+            <div class="meta-item">
+              <mat-icon>badge</mat-icon>
+              <span>{{ employee()!.employmentType }}</span>
+            </div>
+          </div>
+
+          <div class="contact-quickbar">
+            <a [href]="'mailto:' + employee()!.email" class="contact-chip">
+              <mat-icon>email</mat-icon>
+              {{ employee()!.email }}
+            </a>
+            <a [href]="'tel:' + employee()!.phoneNumber" class="contact-chip">
+              <mat-icon>phone</mat-icon>
+              {{ employee()!.phoneNumber }}
+            </a>
+            <div class="contact-chip joining">
+              <mat-icon>calendar_today</mat-icon>
+              Joined {{ employee()!.joiningDate }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-card>
+
+    <!-- Tabbed Profile Content -->
+    <mat-card class="content-card">
+      <mat-tab-group
+        animationDuration="200ms"
+        [selectedIndex]="activeTabIndex()"
+        (selectedIndexChange)="activeTabIndex.set($event)"
+      >
+        <!-- Tab 1: Overview & Personal Details -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">person</mat-icon>
+            Overview
+          </ng-template>
+
+          <div class="tab-body">
+            <div class="section-header">
+              <h3>Demographics & Personal Details</h3>
+              @if (canManage()) {
+                <button mat-button color="primary" (click)="openEditDialog('personal')">
+                  <mat-icon>edit</mat-icon>
+                  Edit Personal Details
+                </button>
+              }
+            </div>
+
+            <div class="info-grid">
+              <div class="info-tile">
+                <span class="tile-label">First Name</span>
+                <span class="tile-value">{{ employee()!.firstName }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Middle Name</span>
+                <span class="tile-value">{{ employee()!.middleName || '—' }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Last Name</span>
+                <span class="tile-value">{{ employee()!.lastName }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Date of Birth</span>
+                <span class="tile-value">{{ employee()!.dateOfBirth }} (Age: {{ calculateAge(employee()!.dateOfBirth) }})</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Gender</span>
+                <span class="tile-value">{{ employee()!.gender }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Blood Group</span>
+                <span class="tile-value">{{ employee()!.bloodGroup || 'Not specified' }}</span>
+              </div>
+            </div>
+
+            <div class="section-header">
+              <h3>Contact Information</h3>
+            </div>
+            <div class="info-grid">
+              <div class="info-tile">
+                <span class="tile-label">Email Address</span>
+                <span class="tile-value">{{ employee()!.email }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Primary Mobile Phone</span>
+                <span class="tile-value">{{ employee()!.phoneNumber }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Alternate Phone</span>
+                <span class="tile-value">{{ employee()!.alternatePhoneNumber || '—' }}</span>
+              </div>
+            </div>
+
+            <div class="section-header">
+              <h3>Residential Address</h3>
+            </div>
+            <div class="info-grid">
+              <div class="info-tile col-span-2">
+                <span class="tile-label">Street Address</span>
+                <span class="tile-value">
+                  {{ employee()!.addressLine1 || '—' }}
+                  @if (employee()!.addressLine2) {
+                    , {{ employee()!.addressLine2 }}
+                  }
+                </span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">City</span>
+                <span class="tile-value">{{ employee()!.city || '—' }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">District</span>
+                <span class="tile-value">{{ employee()!.district || '—' }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">State</span>
+                <span class="tile-value">{{ employee()!.state || '—' }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Postal / PIN Code</span>
+                <span class="tile-value">{{ employee()!.pinCode || '—' }}</span>
+              </div>
+            </div>
+
+            <div class="section-header">
+              <h3>Emergency Contact</h3>
+            </div>
+            <div class="info-grid">
+              <div class="info-tile">
+                <span class="tile-label">Contact Person</span>
+                <span class="tile-value">{{ employee()!.emergencyContactName || '—' }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Relationship</span>
+                <span class="tile-value">{{ employee()!.emergencyContactRelation || '—' }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Emergency Phone</span>
+                <span class="tile-value">{{ employee()!.emergencyContactPhone || '—' }}</span>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- Tab 2: Professional Details -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">work</mat-icon>
+            Professional Details
+          </ng-template>
+
+          <div class="tab-body">
+            <div class="section-header">
+              <h3>Organizational Assignment</h3>
+              @if (canManage()) {
+                <button mat-button color="primary" (click)="openEditDialog('professional')">
+                  <mat-icon>edit</mat-icon>
+                  Edit Professional Assignment
+                </button>
+              }
+            </div>
+
+            <div class="info-grid">
+              <div class="info-tile">
+                <span class="tile-label">Employee ID / Number</span>
+                <span class="tile-value highlight">{{ employee()!.employeeNumber }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Designation</span>
+                <span class="tile-value highlight">{{ employee()!.designation }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Department</span>
+                <span class="tile-value">{{ employee()!.departmentName || '—' }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Branch</span>
+                <span class="tile-value">{{ employee()!.branchName || 'Primary / Headquarters' }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Employment Type</span>
+                <span class="tile-value">{{ employee()!.employmentType }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Current Status</span>
+                <span class="status-badge" [ngClass]="employee()!.status.toLowerCase()">
+                  {{ employee()!.status }}
+                </span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Date of Joining</span>
+                <span class="tile-value">{{ employee()!.joiningDate }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Date of Leaving</span>
+                <span class="tile-value">{{ employee()!.leavingDate || 'Currently Employed' }}</span>
+              </div>
+              <div class="info-tile col-span-2">
+                <span class="tile-label">Reporting Manager</span>
+                <span class="tile-value">
+                  @if (employee()!.reportingManagerName) {
+                    {{ employee()!.reportingManagerName }} ({{ employee()!.reportingManagerDesignation || 'Manager' }})
+                  } @else {
+                    None (Direct Hospital Administration)
+                  }
+                </span>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- Tab 3: User Account & System Access -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">security</mat-icon>
+            Account & Roles
+          </ng-template>
+
+          <div class="tab-body">
+            <div class="section-header">
+              <h3>System Credentials & Access</h3>
+              @if (canLinkAccount()) {
+                <button mat-flat-button color="primary" (click)="openAccountDialog()">
+                  <mat-icon>manage_accounts</mat-icon>
+                  {{ employee()!.hasUserAccount ? 'Manage / Unlink Account' : 'Provision User Account' }}
+                </button>
+              }
+            </div>
+
+            @if (employee()!.hasUserAccount && employee()!.userAccount) {
+              <div class="account-card-active">
+                <div class="account-header-row">
+                  <div class="user-main">
+                    <mat-icon class="user-icon">account_box</mat-icon>
+                    <div>
+                      <h4 class="username">{{ employee()!.userAccount!.username }}</h4>
+                      <p class="user-email">{{ employee()!.userAccount!.email }}</p>
+                    </div>
+                  </div>
+                  <span class="account-status-badge" [ngClass]="employee()!.userAccount!.status.toLowerCase()">
+                    {{ employee()!.userAccount!.status }}
+                  </span>
+                </div>
+
+                <div class="roles-section">
+                  <span class="roles-label">Assigned Roles:</span>
+                  <div class="role-chips">
+                    @for (role of employee()!.userAccount!.roleCodes; track role) {
+                      <span class="role-chip">{{ role }}</span>
+                    }
+                  </div>
+                </div>
+
+                <div class="account-notice">
+                  <mat-icon>info</mat-icon>
+                  <span>This employee holds active system credentials. Unlinking this account will immediately revoke all JWT refresh tokens and active sessions.</span>
+                </div>
+              </div>
+            } @else {
+              <div class="no-account-card">
+                <mat-icon class="no-account-icon">person_add_disabled</mat-icon>
+                <h4>No System Login Account</h4>
+                <p>This staff member is registered in the hospital directory but cannot sign in to CareOS.</p>
+                @if (canLinkAccount()) {
+                  <button mat-stroked-button color="primary" (click)="openAccountDialog()">
+                    <mat-icon>add_moderator</mat-icon>
+                    Provision Login Account Now
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        </mat-tab>
+
+        <!-- Tab 4: Lifecycle History -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">history</mat-icon>
+            Lifecycle History
+          </ng-template>
+
+          <div class="tab-body">
+            <div class="section-header">
+              <h3>Status Transition Audit Trail</h3>
+              @if (canChangeStatus()) {
+                <button mat-flat-button color="accent" (click)="openStatusDialog()">
+                  <mat-icon>swap_horiz</mat-icon>
+                  Change Status
+                </button>
+              }
+            </div>
+
+            @if (lifecycleEvents().length === 0) {
+              <div class="empty-history">
+                <mat-icon>hourglass_empty</mat-icon>
+                <p>No status transition records found for this employee.</p>
+              </div>
+            } @else {
+              <div class="table-responsive">
+                <table class="audit-table">
+                  <thead>
+                    <tr>
+                      <th>Date / Time</th>
+                      <th>Previous Status</th>
+                      <th>New Status</th>
+                      <th>Effective Date</th>
+                      <th>Changed By</th>
+                      <th>Reason / Justification</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (ev of lifecycleEvents(); track ev.publicId) {
+                      <tr>
+                        <td class="date-cell">{{ ev.createdAt }}</td>
+                        <td>
+                          @if (ev.previousStatus) {
+                            <span class="status-badge" [ngClass]="ev.previousStatus.toLowerCase()">
+                              {{ ev.previousStatus }}
+                            </span>
+                          } @else {
+                            <span class="text-muted">Initial (Registration)</span>
+                          }
+                        </td>
+                        <td>
+                          <span class="status-badge" [ngClass]="ev.newStatus.toLowerCase()">
+                            {{ ev.newStatus }}
+                          </span>
+                        </td>
+                        <td>{{ ev.effectiveDate || 'Immediate' }}</td>
+                        <td class="actor-cell">
+                          <mat-icon>person</mat-icon>
+                          {{ ev.actorUsername }}
+                        </td>
+                        <td class="reason-cell">{{ ev.reason }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </mat-card>
+  }
+</div>

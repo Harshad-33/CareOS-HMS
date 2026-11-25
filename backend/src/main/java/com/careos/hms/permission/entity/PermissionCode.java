@@ -31,5 +31,12 @@ public final class PermissionCode {
     public static final String HOSPITAL_PROFILE_UPDATE = "HOSPITAL_PROFILE_UPDATE";
     public static final String HOSPITAL_AUDIT_READ = "HOSPITAL_AUDIT_READ";
     public static final String PLATFORM_DOCUMENTS_VERIFY = "PLATFORM_DOCUMENTS_VERIFY";
+
+    // Phase 4 Employee Management Permissions
+    public static final String HOSPITAL_EMPLOYEES_READ = "HOSPITAL_EMPLOYEES_READ";
+    public static final String HOSPITAL_EMPLOYEES_MANAGE = "HOSPITAL_EMPLOYEES_MANAGE";
+    public static final String HOSPITAL_EMPLOYEES_STATUS = "HOSPITAL_EMPLOYEES_STATUS";
+    public static final String HOSPITAL_EMPLOYEES_ACCOUNT_LINK = "HOSPITAL_EMPLOYEES_ACCOUNT_LINK";
+    public static final String PLATFORM_EMPLOYEES_READ = "PLATFORM_EMPLOYEES_READ";
 }
 

@@ -101,6 +101,28 @@ export const NAVIGATION_ITEMS: readonly NavItem[] = [
     ],
   },
   {
+    label: 'Leave Management',
+    route: '/hr/leaves',
+    icon: 'event_note',
+    section: 'administration',
+    requiredPermissions: [
+      PERMISSIONS.HR_LEAVE_VIEW_ALL,
+      PERMISSIONS.HR_LEAVE_APPROVE,
+      PERMISSIONS.HOSPITAL_USERS_MANAGE,
+    ],
+  },
+  {
+    label: 'My Leaves',
+    route: '/hr/self-service/leaves',
+    icon: 'time_to_leave',
+    section: 'administration',
+    requiredPermissions: [
+      PERMISSIONS.HR_LEAVE_VIEW_SELF,
+      PERMISSIONS.HR_PORTAL_ACCESS,
+      PERMISSIONS.HOSPITAL_WORKSPACE_READ,
+    ],
+  },
+  {
     label: 'Users',
     route: '/users',
     icon: 'manage_accounts',

@@ -97,7 +97,7 @@ describe('CareOS-HMS Shell, Auth Routing & RBAC Navigation', () => {
     const compiled = hospitalFixture.nativeElement as HTMLElement;
 
     expect(compiled.querySelector('.shell-brand__name')?.textContent).toContain('CareOS-HMS');
-    expect(compiled.querySelectorAll('.sidebar-item').length).toBe(14);
+    expect(compiled.querySelectorAll('.sidebar-item').length).toBe(16);
     expect(compiled.querySelector('.shell-header__tenant-chip')?.textContent).toContain(
       'CareOS General Hospital'
     );

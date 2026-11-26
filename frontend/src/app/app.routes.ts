@@ -69,6 +69,36 @@ export const routes: Routes = [
           import('./features/employees/employees.routes').then((m) => m.EMPLOYEES_ROUTES),
       },
       {
+        path: 'hr/leaves',
+        canActivate: [permissionGuard],
+        data: {
+          breadcrumb: 'Leave Management',
+          requiredPermissions: [
+            PERMISSIONS.HR_LEAVE_VIEW_ALL,
+            PERMISSIONS.HR_LEAVE_APPROVE,
+            PERMISSIONS.HOSPITAL_USERS_MANAGE,
+          ],
+        },
+        loadChildren: () =>
+          import('./features/hr/leaves/hr-leaves.routes').then((m) => m.HR_LEAVES_ROUTES),
+      },
+      {
+        path: 'hr/self-service/leaves',
+        canActivate: [permissionGuard],
+        data: {
+          breadcrumb: 'My Leaves',
+          requiredPermissions: [
+            PERMISSIONS.HR_LEAVE_VIEW_SELF,
+            PERMISSIONS.HR_PORTAL_ACCESS,
+            PERMISSIONS.HOSPITAL_WORKSPACE_READ,
+          ],
+        },
+        loadComponent: () =>
+          import('./features/hr/leaves/components/my-leaves/my-leaves.component').then(
+            (m) => m.MyLeavesComponent
+          ),
+      },
+      {
         path: 'patients',
         canActivate: [permissionGuard],
         data: {

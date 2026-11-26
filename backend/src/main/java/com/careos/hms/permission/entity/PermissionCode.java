@@ -38,5 +38,25 @@ public final class PermissionCode {
     public static final String HOSPITAL_EMPLOYEES_STATUS = "HOSPITAL_EMPLOYEES_STATUS";
     public static final String HOSPITAL_EMPLOYEES_ACCOUNT_LINK = "HOSPITAL_EMPLOYEES_ACCOUNT_LINK";
     public static final String PLATFORM_EMPLOYEES_READ = "PLATFORM_EMPLOYEES_READ";
+
+    // Phase 5 HR Management Permissions
+    public static final String PLATFORM_HR_READ = "PLATFORM_HR_READ";
+    public static final String HOSPITAL_HR_SELF_SERVICE = "HOSPITAL_HR_SELF_SERVICE";
+    public static final String HOSPITAL_LEAVES_APPLY = "HOSPITAL_LEAVES_APPLY";
+    public static final String HOSPITAL_LEAVES_READ = "HOSPITAL_LEAVES_READ";
+    public static final String HOSPITAL_LEAVES_APPROVE = "HOSPITAL_LEAVES_APPROVE";
+    public static final String HOSPITAL_LEAVES_MANAGE = "HOSPITAL_LEAVES_MANAGE";
+    public static final String HOSPITAL_ATTENDANCE_RECORD = "HOSPITAL_ATTENDANCE_RECORD";
+    public static final String HOSPITAL_ATTENDANCE_READ = "HOSPITAL_ATTENDANCE_READ";
+    public static final String HOSPITAL_ATTENDANCE_APPROVE = "HOSPITAL_ATTENDANCE_APPROVE";
+    public static final String HOSPITAL_ATTENDANCE_MANAGE = "HOSPITAL_ATTENDANCE_MANAGE";
+    public static final String HOSPITAL_SHIFTS_READ = "HOSPITAL_SHIFTS_READ";
+    public static final String HOSPITAL_SHIFTS_MANAGE = "HOSPITAL_SHIFTS_MANAGE";
+    public static final String HOSPITAL_SHIFTS_SWAP = "HOSPITAL_SHIFTS_SWAP";
+    public static final String HOSPITAL_HOLIDAYS_READ = "HOSPITAL_HOLIDAYS_READ";
+    public static final String HOSPITAL_HOLIDAYS_MANAGE = "HOSPITAL_HOLIDAYS_MANAGE";
+    public static final String HOSPITAL_HR_DOCUMENTS_READ = "HOSPITAL_HR_DOCUMENTS_READ";
+    public static final String HOSPITAL_HR_DOCUMENTS_MANAGE = "HOSPITAL_HR_DOCUMENTS_MANAGE";
+    public static final String HOSPITAL_HR_REPORTS_READ = "HOSPITAL_HR_REPORTS_READ";
 }
 

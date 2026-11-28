@@ -10,14 +10,20 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { ApplyLeaveRequest, HalfDayPeriod, LeaveBalance, LeaveType } from '../../models/leave.models';
-import { LeaveService } from '../../services/leave.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
+import {
+  ApplyLeaveRequest,
+  HalfDayPeriod,
+  LeaveBalance,
+  LeaveType,
+  LeaveTypeSummary,
+} from '../../models/leave.models';
+import { LeaveService } from '../../services/leave.service';
 
 export interface ApplyLeaveDialogData {
-  leaveTypes: LeaveType[];
+  leaveTypes: (LeaveTypeSummary | LeaveType)[];
   balances?: LeaveBalance[];
-  employeePublicId?: string; // If HR applying on behalf, otherwise null for Self-Service
+  employeePublicId?: string;
 }
 
 @Component({
@@ -68,8 +74,8 @@ export interface ApplyLeaveDialogData {
             <div class="note-content">
               <strong>{{ selectedType.name }} Policy:</strong>
               Annual: {{ selectedType.annualAllowance }} days •
-              Workflow: {{ selectedType.approvalWorkflow }} •
-              {{ selectedType.requiresDocument ? 'Medical Certificate Required' : 'No document required' }}
+              Workflow: {{ selectedType.approvalWorkflowType }} •
+              {{ selectedType.medicalCertRequired ? 'Medical Certificate Required (> 2 days)' : 'No document required' }}
             </div>
           </div>
 
@@ -89,7 +95,7 @@ export interface ApplyLeaveDialogData {
           </div>
 
           <!-- Half Day Options -->
-          <div class="half-day-section" *ngIf="selectedType?.allowHalfDay">
+          <div class="half-day-section" *ngIf="selectedType">
             <mat-checkbox formControlName="halfDay" (change)="onHalfDayToggle($event.checked)">
               Half-Day Application (Single Date only)
             </mat-checkbox>
@@ -122,17 +128,17 @@ export interface ApplyLeaveDialogData {
             </mat-error>
           </mat-form-field>
 
-          <!-- Emergency Contact Phone -->
+          <!-- Contact Phone During Leave -->
           <mat-form-field appearance="outline" class="w-full">
-            <mat-label>Emergency Contact Phone (Optional)</mat-label>
-            <input matInput formControlName="emergencyContactPhone" placeholder="+91-9876543210" />
+            <mat-label>Contact Phone During Leave (Optional)</mat-label>
+            <input matInput formControlName="contactPhoneDuringLeave" placeholder="+91-9876543210" />
           </mat-form-field>
 
           <!-- Document Upload -->
-          <div class="doc-upload-box" [class.doc-required]="selectedType?.requiresDocument">
+          <div class="doc-upload-box" [class.doc-required]="isDocumentMandatory()">
             <label class="doc-label">
               <mat-icon>attach_file</mat-icon>
-              <span>{{ selectedType?.requiresDocument ? 'Medical Certificate (Mandatory)' : 'Supporting Attachment (Optional)' }}</span>
+              <span>{{ isDocumentMandatory() ? 'Medical Certificate (Mandatory for > 2 days)' : 'Supporting Attachment (Optional)' }}</span>
             </label>
             <input type="file" (change)="onFileSelected($event)" accept=".pdf,.png,.jpg,.jpeg" />
             <span *ngIf="uploadedFileName" class="uploaded-name">
@@ -148,7 +154,7 @@ export interface ApplyLeaveDialogData {
             mat-flat-button
             color="primary"
             type="submit"
-            [disabled]="form.invalid || isUploading() || (selectedType?.requiresDocument && !documentKey)"
+            [disabled]="form.invalid || isUploading() || (isDocumentMandatory() && !documentStorageKey)"
           >
             Submit Application
           </button>
@@ -157,34 +163,13 @@ export interface ApplyLeaveDialogData {
     </div>
   `,
   styles: [`
-    .dialog-container {
-      padding: 8px 16px;
-      min-width: 480px;
-      max-width: 580px;
-    }
-    .dialog-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-    .dialog-header h2 {
-      margin: 0;
-      font-size: 1.25rem;
-    }
-    .w-full {
-      width: 100%;
-      margin-bottom: 4px;
-    }
-    .form-row {
-      display: flex;
-      gap: 12px;
-    }
+    .dialog-container { padding: 8px 16px; min-width: 480px; max-width: 580px; }
+    .dialog-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .dialog-header h2 { margin: 0; font-size: 1.25rem; }
+    .w-full { width: 100%; margin-bottom: 4px; }
+    .form-row { display: flex; gap: 12px; }
     .flex-1 { flex: 1; }
-    .balance-tag {
-      color: #1976d2;
-      font-size: 0.85rem;
-    }
+    .balance-tag { color: #1976d2; font-size: 0.85rem; }
     .policy-note {
       display: flex;
       align-items: flex-start;
@@ -197,21 +182,14 @@ export interface ApplyLeaveDialogData {
       font-size: 0.85rem;
       color: #2e7d32;
     }
-    .note-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-    }
+    .note-icon { font-size: 18px; width: 18px; height: 18px; }
     .half-day-section {
       background: #f5f5f5;
       padding: 8px 12px;
       border-radius: 6px;
       margin-bottom: 12px;
     }
-    .period-radios {
-      margin-top: 8px;
-      padding-left: 24px;
-    }
+    .period-radios { margin-top: 8px; padding-left: 24px; }
     .calc-days-banner {
       display: flex;
       justify-content: space-between;
@@ -223,10 +201,7 @@ export interface ApplyLeaveDialogData {
       margin-bottom: 12px;
       font-size: 0.9rem;
     }
-    .days-highlight {
-      font-size: 1.1rem;
-      color: #1565c0;
-    }
+    .days-highlight { font-size: 1.1rem; color: #1565c0; }
     .doc-upload-box {
       border: 1px dashed #bdbdbd;
       border-radius: 6px;
@@ -237,10 +212,7 @@ export interface ApplyLeaveDialogData {
       background: #fafafa;
       margin-bottom: 8px;
     }
-    .doc-upload-box.doc-required {
-      border-color: #f57c00;
-      background: #fff8e1;
-    }
+    .doc-upload-box.doc-required { border-color: #f57c00; background: #fff8e1; }
     .doc-label {
       display: flex;
       align-items: center;
@@ -249,10 +221,7 @@ export interface ApplyLeaveDialogData {
       font-weight: 500;
       color: #424242;
     }
-    .uploaded-name {
-      font-size: 0.8rem;
-      color: #2e7d32;
-    }
+    .uploaded-name { font-size: 0.8rem; color: #2e7d32; }
   `],
 })
 export class ApplyLeaveDialogComponent implements OnInit {
@@ -262,8 +231,8 @@ export class ApplyLeaveDialogComponent implements OnInit {
   private readonly leaveService = inject(LeaveService);
   private readonly notificationService = inject(NotificationService);
 
-  selectedType: LeaveType | null = null;
-  documentKey: string | null = null;
+  selectedType: LeaveTypeSummary | LeaveType | null = null;
+  documentStorageKey: string | null = null;
   uploadedFileName: string | null = null;
   readonly isUploading = signal(false);
   readonly calculatedDays = signal(0);
@@ -280,7 +249,7 @@ export class ApplyLeaveDialogComponent implements OnInit {
       halfDay: [false],
       halfDayPeriod: ['FIRST_HALF'],
       reason: ['', [Validators.required, Validators.maxLength(500)]],
-      emergencyContactPhone: ['', [Validators.maxLength(32)]],
+      contactPhoneDuringLeave: ['', [Validators.maxLength(32)]],
     });
 
     if (this.data.leaveTypes?.length > 0) {
@@ -288,6 +257,10 @@ export class ApplyLeaveDialogComponent implements OnInit {
       this.form.patchValue({ leaveTypePublicId: this.data.leaveTypes[0].publicId });
     }
     this.calculateDays();
+  }
+
+  isDocumentMandatory(): boolean {
+    return Boolean(this.selectedType?.medicalCertRequired) && this.calculatedDays() > 2;
   }
 
   onTypeChange(typePublicId: string): void {
@@ -302,7 +275,6 @@ export class ApplyLeaveDialogComponent implements OnInit {
 
   onHalfDayToggle(checked: boolean): void {
     if (checked) {
-      // Half-day must have startDate == endDate
       const start = this.form.get('startDate')?.value;
       if (start) {
         this.form.get('endDate')?.setValue(start);
@@ -346,7 +318,7 @@ export class ApplyLeaveDialogComponent implements OnInit {
 
     this.leaveService.uploadDocument(file).subscribe({
       next: (res) => {
-        this.documentKey = res.documentKey;
+        this.documentStorageKey = res.documentStorageKey;
         this.uploadedFileName = res.originalFilename;
         this.isUploading.set(false);
         this.notificationService.success('Document uploaded successfully');
@@ -370,8 +342,8 @@ export class ApplyLeaveDialogComponent implements OnInit {
       halfDay: Boolean(val.halfDay),
       halfDayPeriod: val.halfDay ? (val.halfDayPeriod as HalfDayPeriod) : undefined,
       reason: val.reason.trim(),
-      emergencyContactPhone: val.emergencyContactPhone ? val.emergencyContactPhone.trim() : undefined,
-      documentKey: this.documentKey || undefined,
+      contactPhoneDuringLeave: val.contactPhoneDuringLeave ? val.contactPhoneDuringLeave.trim() : undefined,
+      documentStorageKey: this.documentStorageKey || undefined,
     };
 
     this.dialogRef.close(req);

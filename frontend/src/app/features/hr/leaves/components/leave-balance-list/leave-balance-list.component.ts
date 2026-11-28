@@ -11,6 +11,14 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
+import { PERMISSIONS } from '../../../../../core/constants/permissions.constants';
+import { AuthStateService } from '../../../../../core/services/auth-state.service';
+import { NotificationService } from '../../../../../core/services/notification.service';
+import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state';
+import { LoadingIndicatorComponent } from '../../../../../shared/components/loading-indicator/loading-indicator';
+import { PageHeaderComponent } from '../../../../../shared/components/page-header/page-header';
+import { EmployeeSummary } from '../../../../employees/models/employee.model';
+import { EmployeeService } from '../../../../employees/services/employee.service';
 import {
   AdjustLeaveBalanceRequest,
   AllocateLeaveBalanceRequest,
@@ -19,12 +27,6 @@ import {
   LeaveType,
 } from '../../models/leave.models';
 import { LeaveService } from '../../services/leave.service';
-import { EmployeeService } from '../../../../employees/services/employee.service';
-import { EmployeeSummary } from '../../../../employees/models/employee.model';
-import { NotificationService } from '../../../../../core/services/notification.service';
-import { PageHeaderComponent } from '../../../../../shared/components/page-header/page-header';
-import { LoadingIndicatorComponent } from '../../../../../shared/components/loading-indicator/loading-indicator';
-import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state';
 import { LeaveBalanceDialogComponent } from '../leave-balance-dialog/leave-balance-dialog.component';
 
 @Component({
@@ -52,7 +54,7 @@ import { LeaveBalanceDialogComponent } from '../leave-balance-dialog/leave-balan
         title="Leave Balance & Ledger Management"
         subtitle="Allocate annual leave balances, make manual adjustments, and inspect immutable transaction audit ledgers"
       >
-        <button mat-flat-button color="primary" (click)="openAllocateDialog()">
+        <button *ngIf="canManage()" mat-flat-button color="primary" (click)="openAllocateDialog()">
           <mat-icon>add_card</mat-icon>
           Allocate Balance
         </button>
@@ -90,7 +92,7 @@ import { LeaveBalanceDialogComponent } from '../leave-balance-dialog/leave-balan
             </div>
             <mat-card-content class="card-body">
               <div class="avail-num">{{ bal.availableBalance }}</div>
-              <div class="avail-label">Available Days</div>
+              <div class="avail-label">Available Days ({{ bal.calendarYear }})</div>
 
               <div class="metrics-row">
                 <div class="metric-col">
@@ -105,13 +107,15 @@ import { LeaveBalanceDialogComponent } from '../leave-balance-dialog/leave-balan
                   <span class="val text-warn">{{ bal.pendingApprovalDays }}</span>
                   <span class="lbl">Pending</span>
                 </div>
-                <div class="metric-col">
-                  <span class="val text-muted">{{ bal.carriedForward }}</span>
-                  <span class="lbl">Carried Fwd</span>
-                </div>
               </div>
 
-              <button mat-stroked-button color="primary" class="adjust-btn" (click)="openAdjustDialog(bal)">
+              <button
+                *ngIf="canManage()"
+                mat-stroked-button
+                color="primary"
+                class="adjust-btn"
+                (click)="openAdjustDialog(bal)"
+              >
                 <mat-icon>tune</mat-icon> Adjust Balance
               </button>
             </mat-card-content>
@@ -122,7 +126,7 @@ import { LeaveBalanceDialogComponent } from '../leave-balance-dialog/leave-balan
           *ngIf="balances().length === 0"
           icon="account_balance_wallet"
           title="No Balances Allocated"
-          [description]="'No leave balances allocated for this employee in ' + selectedYear + '. Click Allocate Balance above to allocate.'"
+          [description]="'No leave balances allocated for this employee in ' + selectedYear + '.'"
         ></app-empty-state>
 
         <!-- Transaction Ledger Table -->
@@ -137,7 +141,7 @@ import { LeaveBalanceDialogComponent } from '../leave-balance-dialog/leave-balan
             <table mat-table [dataSource]="transactions()" class="w-full">
               <ng-container matColumnDef="timestamp">
                 <th mat-header-cell *matHeaderCellDef>Date & Time</th>
-                <td mat-cell *matCellDef="let tx">{{ tx.transactionTimestamp | date:'medium' }}</td>
+                <td mat-cell *matCellDef="let tx">{{ tx.createdAt | date:'medium' }}</td>
               </ng-container>
 
               <ng-container matColumnDef="leaveType">
@@ -155,22 +159,28 @@ import { LeaveBalanceDialogComponent } from '../leave-balance-dialog/leave-balan
               <ng-container matColumnDef="days">
                 <th mat-header-cell *matHeaderCellDef>Days</th>
                 <td mat-cell *matCellDef="let tx">
-                  <strong [class.text-success]="tx.days > 0" [class.text-danger]="tx.days < 0">
-                    {{ tx.days > 0 ? '+' : '' }}{{ tx.days }}
+                  <strong
+                    [class.text-danger]="tx.transactionType === 'DEBIT_APPROVED_LEAVE' || tx.days < 0"
+                    [class.text-success]="tx.transactionType !== 'DEBIT_APPROVED_LEAVE' && tx.days > 0"
+                  >
+                    {{ formatTxDays(tx) }}
                   </strong>
                 </td>
               </ng-container>
 
               <ng-container matColumnDef="balanceAfter">
-                <th mat-header-cell *matHeaderCellDef>Balance After</th>
-                <td mat-cell *matCellDef="let tx"><strong>{{ tx.balanceAfter }}</strong></td>
+                <th mat-header-cell *matHeaderCellDef>Balance (Before → After)</th>
+                <td mat-cell *matCellDef="let tx">
+                  <span class="text-muted">{{ tx.balanceBefore }} → </span>
+                  <strong>{{ tx.balanceAfter }}</strong>
+                </td>
               </ng-container>
 
-              <ng-container matColumnDef="reason">
-                <th mat-header-cell *matHeaderCellDef>Reason & Performed By</th>
+              <ng-container matColumnDef="remarks">
+                <th mat-header-cell *matHeaderCellDef>Remarks & Actor</th>
                 <td mat-cell *matCellDef="let tx">
-                  <div class="text-dark">{{ tx.reason }}</div>
-                  <div class="text-muted text-xs">by {{ tx.performedBy }}</div>
+                  <div class="text-dark">{{ tx.remarks || '-' }}</div>
+                  <div class="text-muted text-xs">by {{ tx.actorUsername }}</div>
                 </td>
               </ng-container>
 
@@ -263,6 +273,7 @@ export class LeaveBalanceListComponent implements OnInit {
   private readonly leaveService = inject(LeaveService);
   private readonly employeeService = inject(EmployeeService);
   private readonly notificationService = inject(NotificationService);
+  private readonly authState = inject(AuthStateService);
   private readonly dialog = inject(MatDialog);
 
   readonly isLoading = signal(false);
@@ -275,10 +286,21 @@ export class LeaveBalanceListComponent implements OnInit {
   selectedEmpPubId: string | null = null;
   selectedYear: number = new Date().getFullYear();
 
-  readonly ledgerColumns: string[] = ['timestamp', 'leaveType', 'type', 'days', 'balanceAfter', 'reason'];
+  readonly ledgerColumns: string[] = ['timestamp', 'leaveType', 'type', 'days', 'balanceAfter', 'remarks'];
 
   ngOnInit(): void {
     this.loadInitialData();
+  }
+
+  canManage(): boolean {
+    return this.authState.hasPermission(PERMISSIONS.HOSPITAL_LEAVES_MANAGE);
+  }
+
+  formatTxDays(tx: LeaveBalanceTransaction): string {
+    if (tx.transactionType === 'DEBIT_APPROVED_LEAVE') {
+      return `-${tx.days}`;
+    }
+    return tx.days > 0 ? `+${tx.days}` : `${tx.days}`;
   }
 
   loadInitialData(): void {

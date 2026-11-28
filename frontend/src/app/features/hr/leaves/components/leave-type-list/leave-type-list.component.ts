@@ -8,14 +8,16 @@ import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
+import { PERMISSIONS } from '../../../../../core/constants/permissions.constants';
+import { AuthStateService } from '../../../../../core/services/auth-state.service';
+import { NotificationService } from '../../../../../core/services/notification.service';
+import { ConfirmDialogComponent } from '../../../../../shared/components/confirm-dialog/confirm-dialog';
+import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state';
+import { LoadingIndicatorComponent } from '../../../../../shared/components/loading-indicator/loading-indicator';
+import { PageHeaderComponent } from '../../../../../shared/components/page-header/page-header';
+import { ConfirmDialogData } from '../../../../../shared/models/confirm-dialog.model';
 import { CreateLeaveTypeRequest, LeaveType, UpdateLeaveTypeRequest } from '../../models/leave.models';
 import { LeaveService } from '../../services/leave.service';
-import { NotificationService } from '../../../../../core/services/notification.service';
-import { PageHeaderComponent } from '../../../../../shared/components/page-header/page-header';
-import { LoadingIndicatorComponent } from '../../../../../shared/components/loading-indicator/loading-indicator';
-import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state';
-import { ConfirmDialogComponent } from '../../../../../shared/components/confirm-dialog/confirm-dialog';
-import { ConfirmDialogData } from '../../../../../shared/models/confirm-dialog.model';
 import { LeaveTypeDialogComponent } from '../leave-type-dialog/leave-type-dialog.component';
 
 @Component({
@@ -40,7 +42,7 @@ import { LeaveTypeDialogComponent } from '../leave-type-dialog/leave-type-dialog
         title="Leave Policies & Entitlements"
         subtitle="Manage configurable hospital leave types, annual allowances and approval workflows"
       >
-        <button mat-flat-button color="primary" (click)="openCreateDialog()">
+        <button *ngIf="canManage()" mat-flat-button color="primary" (click)="openCreateDialog()">
           <mat-icon>add</mat-icon>
           New Leave Policy
         </button>
@@ -80,10 +82,10 @@ import { LeaveTypeDialogComponent } from '../leave-type-dialog/leave-type-dialog
             <ng-container matColumnDef="carryForward">
               <th mat-header-cell *matHeaderCellDef>Carry Forward</th>
               <td mat-cell *matCellDef="let lt">
-                <span *ngIf="lt.carryForwardAllowed" class="text-success">
+                <span *ngIf="lt.carryForwardEnabled" class="text-success">
                   Yes (Max {{ lt.maxCarryForwardDays }} days)
                 </span>
-                <span *ngIf="!lt.carryForwardAllowed" class="text-muted">No</span>
+                <span *ngIf="!lt.carryForwardEnabled" class="text-muted">No</span>
               </td>
             </ng-container>
 
@@ -92,9 +94,13 @@ import { LeaveTypeDialogComponent } from '../leave-type-dialog/leave-type-dialog
               <th mat-header-cell *matHeaderCellDef>Rules & Requirements</th>
               <td mat-cell *matCellDef="let lt">
                 <div class="rules-tags">
-                  <span *ngIf="lt.requiresDocument" class="rule-badge badge-warn">Medical Cert Required</span>
-                  <span *ngIf="lt.allowHalfDay" class="rule-badge badge-info">Half-Day Allowed</span>
-                  <span *ngIf="lt.maxConsecutiveDays > 0" class="rule-badge badge-neutral">Max {{ lt.maxConsecutiveDays }} consecutive</span>
+                  <span *ngIf="lt.medicalCertRequired" class="rule-badge badge-warn">Medical Cert Required</span>
+                  <span class="rule-badge" [class.badge-info]="lt.paid" [class.badge-neutral]="!lt.paid">
+                    {{ lt.paid ? 'Paid Leave' : 'Unpaid Leave' }}
+                  </span>
+                  <span *ngIf="lt.minServiceDaysRequired > 0" class="rule-badge badge-neutral">
+                    Min {{ lt.minServiceDaysRequired }} service days
+                  </span>
                 </div>
               </td>
             </ng-container>
@@ -103,7 +109,7 @@ import { LeaveTypeDialogComponent } from '../leave-type-dialog/leave-type-dialog
             <ng-container matColumnDef="workflow">
               <th mat-header-cell *matHeaderCellDef>Approval Workflow</th>
               <td mat-cell *matCellDef="let lt">
-                <span class="workflow-chip">{{ formatWorkflow(lt.approvalWorkflow) }}</span>
+                <span class="workflow-chip">{{ formatWorkflow(lt.approvalWorkflowType) }}</span>
                 <span class="text-muted text-xs block">({{ lt.approvalLevelsCount }} Level{{ lt.approvalLevelsCount > 1 ? 's' : '' }})</span>
               </td>
             </ng-container>
@@ -122,23 +128,25 @@ import { LeaveTypeDialogComponent } from '../leave-type-dialog/leave-type-dialog
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef class="text-right">Actions</th>
               <td mat-cell *matCellDef="let lt" class="text-right">
-                <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Policy actions">
-                  <mat-icon>more_vert</mat-icon>
-                </button>
-                <mat-menu #menu="matMenu">
-                  <button mat-menu-item (click)="openEditDialog(lt)">
-                    <mat-icon>edit</mat-icon>
-                    <span>Edit Policy</span>
+                <ng-container *ngIf="canManage()">
+                  <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Policy actions">
+                    <mat-icon>more_vert</mat-icon>
                   </button>
-                  <button *ngIf="lt.status === 'ACTIVE'" mat-menu-item (click)="toggleStatus(lt, false)">
-                    <mat-icon color="warn">pause_circle</mat-icon>
-                    <span>Deactivate</span>
-                  </button>
-                  <button *ngIf="lt.status === 'INACTIVE'" mat-menu-item (click)="toggleStatus(lt, true)">
-                    <mat-icon color="primary">play_circle</mat-icon>
-                    <span>Activate</span>
-                  </button>
-                </mat-menu>
+                  <mat-menu #menu="matMenu">
+                    <button mat-menu-item (click)="openEditDialog(lt)">
+                      <mat-icon>edit</mat-icon>
+                      <span>Edit Policy</span>
+                    </button>
+                    <button *ngIf="lt.status === 'ACTIVE'" mat-menu-item (click)="toggleStatus(lt, false)">
+                      <mat-icon color="warn">pause_circle</mat-icon>
+                      <span>Deactivate</span>
+                    </button>
+                    <button *ngIf="lt.status === 'INACTIVE'" mat-menu-item (click)="toggleStatus(lt, true)">
+                      <mat-icon color="primary">play_circle</mat-icon>
+                      <span>Activate</span>
+                    </button>
+                  </mat-menu>
+                </ng-container>
               </td>
             </ng-container>
 
@@ -157,13 +165,8 @@ import { LeaveTypeDialogComponent } from '../leave-type-dialog/leave-type-dialog
     </div>
   `,
   styles: [`
-    .page-container {
-      padding: 24px;
-    }
-    .table-card {
-      margin-top: 16px;
-      overflow: hidden;
-    }
+    .page-container { padding: 24px; }
+    .table-card { margin-top: 16px; overflow: hidden; }
     .w-full { width: 100%; }
     .p-0 { padding: 0 !important; }
     .code-badge {
@@ -181,11 +184,7 @@ import { LeaveTypeDialogComponent } from '../leave-type-dialog/leave-type-dialog
     .text-success { color: #15803d; font-weight: 500; }
     .text-right { text-align: right; }
     .block { display: block; }
-    .rules-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-    }
+    .rules-tags { display: flex; flex-wrap: wrap; gap: 4px; }
     .rule-badge {
       font-size: 0.75rem;
       padding: 2px 6px;
@@ -195,11 +194,7 @@ import { LeaveTypeDialogComponent } from '../leave-type-dialog/leave-type-dialog
     .badge-warn { background: #fef3c7; color: #b45309; }
     .badge-info { background: #e0f2fe; color: #0369a1; }
     .badge-neutral { background: #f3f4f6; color: #4b5563; }
-    .workflow-chip {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #374151;
-    }
+    .workflow-chip { font-size: 0.8rem; font-weight: 600; color: #374151; }
     .status-pill {
       font-size: 0.75rem;
       padding: 3px 10px;
@@ -213,6 +208,7 @@ import { LeaveTypeDialogComponent } from '../leave-type-dialog/leave-type-dialog
 export class LeaveTypeListComponent implements OnInit {
   private readonly leaveService = inject(LeaveService);
   private readonly notificationService = inject(NotificationService);
+  private readonly authState = inject(AuthStateService);
   private readonly dialog = inject(MatDialog);
 
   readonly isLoading = signal(true);
@@ -230,6 +226,10 @@ export class LeaveTypeListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadLeaveTypes();
+  }
+
+  canManage(): boolean {
+    return this.authState.hasPermission(PERMISSIONS.HOSPITAL_LEAVES_MANAGE);
   }
 
   loadLeaveTypes(): void {

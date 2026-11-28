@@ -10,15 +10,19 @@ import {
   ApproveLeaveStepRequest,
   CreateLeaveTypeRequest,
   LeaveApplication,
+  LeaveApplicationSummary,
+  LeaveApprovalInboxItem,
   LeaveBalance,
   LeaveBalanceTransaction,
   LeaveCalendarItem,
   LeaveFilterParams,
   LeaveOverview,
   LeaveType,
+  LeaveTypeSummary,
   PageResponse,
   RejectLeaveStepRequest,
   UpdateLeaveTypeRequest,
+  UploadDocumentResponse,
 } from '../models/leave.models';
 
 @Injectable({
@@ -31,15 +35,27 @@ export class LeaveService {
   // Management Endpoints (/api/v1/hr/management/leaves)
   // ----------------------------------------------------
 
-  getLeaveTypes(): Observable<LeaveType[]> {
+  getLeaveTypes(activeOnly = false): Observable<LeaveType[]> {
     return this.apiClient
-      .get<ApiResponse<LeaveType[]>>('/hr/management/leaves/types')
+      .get<ApiResponse<LeaveType[]>>('/hr/management/leaves/types', {
+        params: { activeOnly },
+      })
       .pipe(map((res) => res.data));
   }
 
   getActiveLeaveTypes(): Observable<LeaveType[]> {
+    return this.getLeaveTypes(true);
+  }
+
+  getLeaveTypeSummaries(): Observable<LeaveTypeSummary[]> {
     return this.apiClient
-      .get<ApiResponse<LeaveType[]>>('/hr/management/leaves/types/active')
+      .get<ApiResponse<LeaveTypeSummary[]>>('/hr/management/leaves/types/summary')
+      .pipe(map((res) => res.data));
+  }
+
+  getLeaveType(publicId: string): Observable<LeaveType> {
+    return this.apiClient
+      .get<ApiResponse<LeaveType>>(`/hr/management/leaves/types/${publicId}`)
       .pipe(map((res) => res.data));
   }
 
@@ -99,19 +115,17 @@ export class LeaveService {
       .pipe(map((res) => res.data));
   }
 
-  getApplications(params?: LeaveFilterParams): Observable<PageResponse<LeaveApplication>> {
+  getApplications(params?: LeaveFilterParams): Observable<PageResponse<LeaveApplicationSummary>> {
     const queryParams: Record<string, string | number | boolean | null | undefined> = {
       page: params?.page ?? 0,
       size: params?.size ?? 20,
     };
-    if (params?.employeePublicId) queryParams['employeePublicId'] = params.employeePublicId;
-    if (params?.departmentPublicId) queryParams['departmentPublicId'] = params.departmentPublicId;
-    if (params?.leaveTypePublicId) queryParams['leaveTypePublicId'] = params.leaveTypePublicId;
     if (params?.status) queryParams['status'] = params.status;
-    if (params?.year) queryParams['year'] = params.year;
 
     return this.apiClient
-      .get<ApiResponse<PageResponse<LeaveApplication>>>('/hr/management/leaves/applications', { params: queryParams })
+      .get<ApiResponse<PageResponse<LeaveApplicationSummary>>>('/hr/management/leaves/applications', {
+        params: queryParams,
+      })
       .pipe(map((res) => res.data));
   }
 
@@ -121,9 +135,9 @@ export class LeaveService {
       .pipe(map((res) => res.data));
   }
 
-  getPendingApprovals(page = 0, size = 20): Observable<PageResponse<LeaveApplication>> {
+  getPendingApprovals(page = 0, size = 20): Observable<PageResponse<LeaveApprovalInboxItem>> {
     return this.apiClient
-      .get<ApiResponse<PageResponse<LeaveApplication>>>('/hr/management/leaves/approvals/pending', {
+      .get<ApiResponse<PageResponse<LeaveApprovalInboxItem>>>('/hr/management/leaves/approvals/inbox', {
         params: { page, size },
       })
       .pipe(map((res) => res.data));
@@ -155,11 +169,17 @@ export class LeaveService {
       .pipe(map((res) => res.data));
   }
 
-  getLeaveCalendar(startDate: string, endDate: string, departmentPublicId?: string): Observable<LeaveCalendarItem[]> {
-    const params: Record<string, string> = { startDate, endDate };
-    if (departmentPublicId) params['departmentPublicId'] = departmentPublicId;
+  cancelApplication(publicId: string): Observable<LeaveApplication> {
     return this.apiClient
-      .get<ApiResponse<LeaveCalendarItem[]>>('/hr/management/leaves/calendar', { params })
+      .post<ApiResponse<LeaveApplication>>(`/hr/management/leaves/applications/${publicId}/cancel`, {})
+      .pipe(map((res) => res.data));
+  }
+
+  getLeaveCalendar(startDate: string, endDate: string): Observable<LeaveCalendarItem[]> {
+    return this.apiClient
+      .get<ApiResponse<LeaveCalendarItem[]>>('/hr/management/leaves/calendar', {
+        params: { startDate, endDate },
+      })
       .pipe(map((res) => res.data));
   }
 
@@ -192,15 +212,15 @@ export class LeaveService {
 
   getMyTransactions(page = 0, size = 20): Observable<PageResponse<LeaveBalanceTransaction>> {
     return this.apiClient
-      .get<ApiResponse<PageResponse<LeaveBalanceTransaction>>>('/hr/self/leaves/transactions', {
+      .get<ApiResponse<PageResponse<LeaveBalanceTransaction>>>('/hr/self/leaves/balances/transactions', {
         params: { page, size },
       })
       .pipe(map((res) => res.data));
   }
 
-  getMyActiveLeaveTypes(): Observable<LeaveType[]> {
+  getMyActiveLeaveTypes(): Observable<LeaveTypeSummary[]> {
     return this.apiClient
-      .get<ApiResponse<LeaveType[]>>('/hr/self/leaves/types')
+      .get<ApiResponse<LeaveTypeSummary[]>>('/hr/self/leaves/types')
       .pipe(map((res) => res.data));
   }
 
@@ -210,17 +230,17 @@ export class LeaveService {
       .pipe(map((res) => res.data));
   }
 
-  uploadDocument(file: File): Observable<{ documentKey: string; originalFilename: string }> {
+  uploadDocument(file: File): Observable<UploadDocumentResponse> {
     const formData = new FormData();
     formData.append('file', file);
     return this.apiClient
-      .post<ApiResponse<{ documentKey: string; originalFilename: string }>>('/hr/self/leaves/upload-document', formData)
+      .post<ApiResponse<UploadDocumentResponse>>('/hr/self/leaves/upload-document', formData)
       .pipe(map((res) => res.data));
   }
 
-  getMyApplications(page = 0, size = 20): Observable<PageResponse<LeaveApplication>> {
+  getMyApplications(page = 0, size = 20): Observable<PageResponse<LeaveApplicationSummary>> {
     return this.apiClient
-      .get<ApiResponse<PageResponse<LeaveApplication>>>('/hr/self/leaves/applications', {
+      .get<ApiResponse<PageResponse<LeaveApplicationSummary>>>('/hr/self/leaves/applications', {
         params: { page, size },
       })
       .pipe(map((res) => res.data));

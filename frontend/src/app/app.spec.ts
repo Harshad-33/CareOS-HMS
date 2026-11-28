@@ -35,6 +35,57 @@ const HOSPITAL_ADMIN_USER: AuthUser = {
     PERMISSIONS.HOSPITAL_USERS_MANAGE,
     PERMISSIONS.HOSPITAL_ROLES_READ,
     PERMISSIONS.HOSPITAL_SETTINGS_MANAGE,
+    PERMISSIONS.HOSPITAL_EMPLOYEES_READ,
+    PERMISSIONS.HOSPITAL_HR_SELF_SERVICE,
+    PERMISSIONS.HOSPITAL_LEAVES_APPLY,
+    PERMISSIONS.HOSPITAL_LEAVES_READ,
+    PERMISSIONS.HOSPITAL_LEAVES_APPROVE,
+    PERMISSIONS.HOSPITAL_LEAVES_MANAGE,
+  ],
+};
+
+const EMPLOYEE_SELF_SERVICE_USER: AuthUser = {
+  ...HOSPITAL_ADMIN_USER,
+  publicId: 'emp-user-1',
+  username: 'nurse.john',
+  roles: ['STAFF_NURSE'],
+  permissions: [
+    PERMISSIONS.AUTH_ME_READ,
+    PERMISSIONS.SYSTEM_HEALTH_VIEW,
+    PERMISSIONS.HOSPITAL_WORKSPACE_READ,
+    PERMISSIONS.HOSPITAL_HR_SELF_SERVICE,
+    PERMISSIONS.HOSPITAL_LEAVES_APPLY,
+  ],
+};
+
+const MANAGER_APPROVER_USER: AuthUser = {
+  ...HOSPITAL_ADMIN_USER,
+  publicId: 'mgr-user-1',
+  username: 'mgr.alice',
+  roles: ['WARD_MANAGER'],
+  permissions: [
+    PERMISSIONS.AUTH_ME_READ,
+    PERMISSIONS.SYSTEM_HEALTH_VIEW,
+    PERMISSIONS.HOSPITAL_WORKSPACE_READ,
+    PERMISSIONS.HOSPITAL_HR_SELF_SERVICE,
+    PERMISSIONS.HOSPITAL_LEAVES_APPLY,
+    PERMISSIONS.HOSPITAL_LEAVES_APPROVE,
+  ],
+};
+
+const HR_READ_MANAGE_USER: AuthUser = {
+  ...HOSPITAL_ADMIN_USER,
+  publicId: 'hr-user-1',
+  username: 'hr.officer',
+  roles: ['HR_OFFICER'],
+  permissions: [
+    PERMISSIONS.AUTH_ME_READ,
+    PERMISSIONS.SYSTEM_HEALTH_VIEW,
+    PERMISSIONS.HOSPITAL_WORKSPACE_READ,
+    PERMISSIONS.HOSPITAL_HR_SELF_SERVICE,
+    PERMISSIONS.HOSPITAL_LEAVES_APPLY,
+    PERMISSIONS.HOSPITAL_LEAVES_READ,
+    PERMISSIONS.HOSPITAL_LEAVES_MANAGE,
   ],
 };
 
@@ -61,6 +112,7 @@ const PLATFORM_SUPER_ADMIN_USER: AuthUser = {
     PERMISSIONS.PLATFORM_OVERVIEW_READ,
     PERMISSIONS.PLATFORM_HOSPITALS_MANAGE,
     PERMISSIONS.PLATFORM_AUDIT_READ,
+    PERMISSIONS.PLATFORM_HR_READ,
   ],
 };
 
@@ -125,6 +177,49 @@ describe('CareOS-HMS Shell, Auth Routing & RBAC Navigation', () => {
     await router.navigateByUrl('/dashboard');
     authState.setSession('jwt-plat', 'csrf-plat', PLATFORM_SUPER_ADMIN_USER);
     await router.navigateByUrl('/patients');
+    expect(location.path()).toBe('/unauthorized');
+  });
+
+  it('should enforce Phase 5B RBAC across Employee, Manager, HR, and Platform roles', async () => {
+    // 1. Employee self-service only: allowed on /hr/self-service/leaves, blocked from /hr/leaves/*
+    authState.setSession('jwt-emp', 'csrf-emp', EMPLOYEE_SELF_SERVICE_USER);
+    const shellFixture = TestBed.createComponent(AppShell);
+    await shellFixture.whenStable();
+    const navTextEmp = (shellFixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(navTextEmp).toContain('My Leaves');
+    expect(navTextEmp).not.toContain('Leave Management');
+
+    await router.navigateByUrl('/hr/self-service/leaves');
+    expect(location.path()).toBe('/hr/self-service/leaves');
+
+    await router.navigateByUrl('/hr/leaves/types');
+    expect(location.path()).toBe('/unauthorized');
+
+    await router.navigateByUrl('/hr/leaves/inbox');
+    expect(location.path()).toBe('/unauthorized');
+
+    // 2. Manager with HOSPITAL_LEAVES_APPROVE only: /hr/leaves redirects to /hr/leaves/inbox; blocked from /types
+    authState.setSession('jwt-mgr', 'csrf-mgr', MANAGER_APPROVER_USER);
+    await router.navigateByUrl('/hr/leaves');
+    expect(location.path()).toBe('/hr/leaves/inbox');
+
+    await router.navigateByUrl('/hr/leaves/types');
+    expect(location.path()).toBe('/unauthorized');
+
+    // 3. HR user without HOSPITAL_LEAVES_APPROVE: allowed on /types and /balances, blocked from /inbox
+    authState.setSession('jwt-hr', 'csrf-hr', HR_READ_MANAGE_USER);
+    await router.navigateByUrl('/hr/leaves/types');
+    expect(location.path()).toBe('/hr/leaves/types');
+
+    await router.navigateByUrl('/hr/leaves/inbox');
+    expect(location.path()).toBe('/unauthorized');
+
+    // 4. Platform user blocked from hospital leave routes
+    authState.setSession('jwt-plat', 'csrf-plat', PLATFORM_SUPER_ADMIN_USER);
+    await router.navigateByUrl('/hr/self-service/leaves');
+    expect(location.path()).toBe('/unauthorized');
+
+    await router.navigateByUrl('/hr/leaves');
     expect(location.path()).toBe('/unauthorized');
   });
 });

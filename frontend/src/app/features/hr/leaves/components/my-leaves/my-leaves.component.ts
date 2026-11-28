@@ -7,14 +7,19 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
-import { ApplyLeaveRequest, LeaveApplication, LeaveBalance, LeaveType } from '../../models/leave.models';
-import { LeaveService } from '../../services/leave.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
-import { PageHeaderComponent } from '../../../../../shared/components/page-header/page-header';
-import { LoadingIndicatorComponent } from '../../../../../shared/components/loading-indicator/loading-indicator';
-import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state';
 import { ConfirmDialogComponent } from '../../../../../shared/components/confirm-dialog/confirm-dialog';
+import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state';
+import { LoadingIndicatorComponent } from '../../../../../shared/components/loading-indicator/loading-indicator';
+import { PageHeaderComponent } from '../../../../../shared/components/page-header/page-header';
 import { ConfirmDialogData } from '../../../../../shared/models/confirm-dialog.model';
+import {
+  ApplyLeaveRequest,
+  LeaveApplicationSummary,
+  LeaveBalance,
+  LeaveTypeSummary,
+} from '../../models/leave.models';
+import { LeaveService } from '../../services/leave.service';
 import { ApplyLeaveDialogComponent } from '../apply-leave-dialog/apply-leave-dialog.component';
 import { LeaveDetailDialogComponent } from '../leave-detail-dialog/leave-detail-dialog.component';
 
@@ -90,11 +95,11 @@ import { LeaveDetailDialogComponent } from '../leave-detail-dialog/leave-detail-
           <mat-card class="table-card">
             <mat-card-content class="p-0">
               <table mat-table [dataSource]="applications()" class="w-full">
-                <!-- App Number Column -->
-                <ng-container matColumnDef="appNumber">
-                  <th mat-header-cell *matHeaderCellDef>Application #</th>
+                <!-- App ID Column -->
+                <ng-container matColumnDef="appId">
+                  <th mat-header-cell *matHeaderCellDef>Reference</th>
                   <td mat-cell *matCellDef="let app">
-                    <span class="font-mono text-dark">{{ app.applicationNumber }}</span>
+                    <span class="font-mono text-dark">{{ app.publicId | slice:0:8 }}</span>
                     <span class="text-xs text-muted block">{{ app.appliedAt | date:'mediumDate' }}</span>
                   </td>
                 </ng-container>
@@ -114,7 +119,7 @@ import { LeaveDetailDialogComponent } from '../leave-detail-dialog/leave-detail-
                     <div class="text-dark">{{ app.startDate }} to {{ app.endDate }}</div>
                     <div class="text-primary text-xs font-semibold">
                       {{ app.totalDays }} Day(s)
-                      <span *ngIf="app.halfDay">({{ app.halfDayPeriod }})</span>
+                      <span *ngIf="app.halfDay">(Half Day)</span>
                     </div>
                   </td>
                 </ng-container>
@@ -129,17 +134,6 @@ import { LeaveDetailDialogComponent } from '../leave-detail-dialog/leave-detail-
                     <span *ngIf="app.status === 'PENDING'" class="text-xs text-muted block mt-1">
                       Step {{ app.currentStepNumber }} of {{ app.requiredStepsCount }}
                     </span>
-                    <span *ngIf="app.finalRejectionReason" class="text-xs text-danger block mt-1">
-                      Reason: {{ app.finalRejectionReason }}
-                    </span>
-                  </td>
-                </ng-container>
-
-                <!-- Reason Column -->
-                <ng-container matColumnDef="reason">
-                  <th mat-header-cell *matHeaderCellDef>Reason</th>
-                  <td mat-cell *matCellDef="let app">
-                    <div class="reason-preview" [matTooltip]="app.reason">{{ app.reason }}</div>
                   </td>
                 </ng-container>
 
@@ -197,10 +191,7 @@ import { LeaveDetailDialogComponent } from '../leave-detail-dialog/leave-detail-
       gap: 16px;
       margin-bottom: 24px;
     }
-    .balance-card {
-      border: 1px solid #e2e8f0;
-      overflow: hidden;
-    }
+    .balance-card { border: 1px solid #e2e8f0; overflow: hidden; }
     .bal-header {
       display: flex;
       justify-content: space-between;
@@ -260,24 +251,8 @@ import { LeaveDetailDialogComponent } from '../leave-detail-dialog/leave-detail-
     .pill-approved { background: #dcfce7; color: #166534; }
     .pill-rejected { background: #fee2e2; color: #991b1b; }
     .pill-cancelled { background: #f3f4f6; color: #4b5563; }
-    .reason-preview {
-      max-width: 220px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      font-size: 0.85rem;
-      color: #475569;
-    }
-    .actions-group {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .btn-sm {
-      padding: 0 10px;
-      height: 30px;
-      font-size: 0.8rem;
-    }
+    .actions-group { display: inline-flex; align-items: center; gap: 6px; }
+    .btn-sm { padding: 0 10px; height: 30px; font-size: 0.8rem; }
   `],
 })
 export class MyLeavesComponent implements OnInit {
@@ -287,11 +262,11 @@ export class MyLeavesComponent implements OnInit {
 
   readonly isLoading = signal(true);
   readonly balances = signal<LeaveBalance[]>([]);
-  readonly applications = signal<LeaveApplication[]>([]);
-  readonly leaveTypes = signal<LeaveType[]>([]);
+  readonly applications = signal<LeaveApplicationSummary[]>([]);
+  readonly leaveTypes = signal<LeaveTypeSummary[]>([]);
 
   readonly currentYear = new Date().getFullYear();
-  readonly displayedColumns: string[] = ['appNumber', 'leaveType', 'dates', 'status', 'reason', 'actions'];
+  readonly displayedColumns: string[] = ['appId', 'leaveType', 'dates', 'status', 'actions'];
 
   ngOnInit(): void {
     this.loadData();
@@ -320,7 +295,7 @@ export class MyLeavesComponent implements OnInit {
     });
   }
 
-  canCancel(app: LeaveApplication): boolean {
+  canCancel(app: LeaveApplicationSummary): boolean {
     if (app.status === 'PENDING') return true;
     if (app.status === 'APPROVED') {
       const today = new Date().toISOString().split('T')[0];
@@ -342,7 +317,9 @@ export class MyLeavesComponent implements OnInit {
       if (!req) return;
       this.leaveService.applyLeave(req).subscribe({
         next: (created) => {
-          this.notificationService.success(`Leave application ${created.applicationNumber} submitted successfully`);
+          this.notificationService.success(
+            `Leave application (${created.publicId.slice(0, 8)}) submitted successfully`
+          );
           this.loadData();
         },
         error: (err) => {
@@ -352,10 +329,10 @@ export class MyLeavesComponent implements OnInit {
     });
   }
 
-  cancelApplication(app: LeaveApplication): void {
+  cancelApplication(app: LeaveApplicationSummary): void {
     const data: ConfirmDialogData = {
       title: 'Cancel Leave Application',
-      message: `Are you sure you want to cancel application ${app.applicationNumber}?`,
+      message: `Are you sure you want to cancel your ${app.leaveTypeName} application (${app.startDate} to ${app.endDate})?`,
       confirmLabel: 'Yes, Cancel',
       severity: 'warn',
     };
@@ -375,10 +352,13 @@ export class MyLeavesComponent implements OnInit {
     });
   }
 
-  openDetailDialog(app: LeaveApplication): void {
+  openDetailDialog(app: LeaveApplicationSummary): void {
     this.dialog.open(LeaveDetailDialogComponent, {
       width: '650px',
-      data: app,
+      data: {
+        applicationPublicId: app.publicId,
+        selfService: true,
+      },
     });
   }
 }

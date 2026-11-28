@@ -105,10 +105,11 @@ export const NAVIGATION_ITEMS: readonly NavItem[] = [
     route: '/hr/leaves',
     icon: 'event_note',
     section: 'administration',
+    requiredScope: 'HOSPITAL',
     requiredPermissions: [
-      PERMISSIONS.HR_LEAVE_VIEW_ALL,
-      PERMISSIONS.HR_LEAVE_APPROVE,
-      PERMISSIONS.HOSPITAL_USERS_MANAGE,
+      PERMISSIONS.HOSPITAL_LEAVES_READ,
+      PERMISSIONS.HOSPITAL_LEAVES_APPROVE,
+      PERMISSIONS.HOSPITAL_LEAVES_MANAGE,
     ],
   },
   {
@@ -116,10 +117,10 @@ export const NAVIGATION_ITEMS: readonly NavItem[] = [
     route: '/hr/self-service/leaves',
     icon: 'time_to_leave',
     section: 'administration',
+    requiredScope: 'HOSPITAL',
     requiredPermissions: [
-      PERMISSIONS.HR_LEAVE_VIEW_SELF,
-      PERMISSIONS.HR_PORTAL_ACCESS,
-      PERMISSIONS.HOSPITAL_WORKSPACE_READ,
+      PERMISSIONS.HOSPITAL_HR_SELF_SERVICE,
+      PERMISSIONS.HOSPITAL_LEAVES_APPLY,
     ],
   },
   {

@@ -4,6 +4,8 @@ export type LeaveApprovalWorkflowType =
   | 'MANAGER_THEN_HR'
   | 'DEPT_HEAD_THEN_HR';
 
+export type ApproverRole = 'REPORTING_MANAGER' | 'DEPARTMENT_HEAD' | 'HR_MANAGER';
+
 export type LeaveApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 
 export type LeaveApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
@@ -14,27 +16,35 @@ export type LeaveTransactionType =
   | 'ALLOCATION'
   | 'MANUAL_ADJUSTMENT'
   | 'DEBIT_APPROVED_LEAVE'
-  | 'CREDIT_REVERSED_LEAVE'
-  | 'EXPIRY'
-  | 'ENCASHMENT'
-  | 'REVERSAL';
+  | 'CREDIT_REVERSED_LEAVE';
 
 export interface LeaveType {
   publicId: string;
   code: string;
   name: string;
-  description?: string;
+  description?: string | null;
   annualAllowance: number;
-  carryForwardAllowed: boolean;
+  carryForwardEnabled: boolean;
   maxCarryForwardDays: number;
-  requiresDocument: boolean;
-  maxConsecutiveDays: number;
-  allowHalfDay: boolean;
-  approvalWorkflow: LeaveApprovalWorkflowType;
+  medicalCertRequired: boolean;
+  minServiceDaysRequired: number;
+  paid: boolean;
+  approvalWorkflowType: LeaveApprovalWorkflowType;
   approvalLevelsCount: number;
   status: 'ACTIVE' | 'INACTIVE';
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface LeaveTypeSummary {
+  publicId: string;
+  code: string;
+  name: string;
+  annualAllowance: number;
+  paid: boolean;
+  medicalCertRequired: boolean;
+  approvalWorkflowType: LeaveApprovalWorkflowType;
+  status: 'ACTIVE' | 'INACTIVE';
 }
 
 export interface CreateLeaveTypeRequest {
@@ -42,12 +52,12 @@ export interface CreateLeaveTypeRequest {
   name: string;
   description?: string;
   annualAllowance: number;
-  carryForwardAllowed: boolean;
+  carryForwardEnabled: boolean;
   maxCarryForwardDays: number;
-  requiresDocument: boolean;
-  maxConsecutiveDays: number;
-  allowHalfDay: boolean;
-  approvalWorkflow: LeaveApprovalWorkflowType;
+  medicalCertRequired: boolean;
+  minServiceDaysRequired: number;
+  paid: boolean;
+  approvalWorkflowType: LeaveApprovalWorkflowType;
   approvalLevelsCount: number;
 }
 
@@ -55,40 +65,38 @@ export interface UpdateLeaveTypeRequest {
   name: string;
   description?: string;
   annualAllowance: number;
-  carryForwardAllowed: boolean;
+  carryForwardEnabled: boolean;
   maxCarryForwardDays: number;
-  requiresDocument: boolean;
-  maxConsecutiveDays: number;
-  allowHalfDay: boolean;
-  approvalWorkflow: LeaveApprovalWorkflowType;
+  medicalCertRequired: boolean;
+  minServiceDaysRequired: number;
+  paid: boolean;
+  approvalWorkflowType: LeaveApprovalWorkflowType;
   approvalLevelsCount: number;
 }
 
 export interface LeaveBalance {
   publicId: string;
   employeePublicId: string;
-  employeeName: string;
   employeeNumber: string;
-  departmentName?: string;
-  branchName?: string;
+  employeeName: string;
   leaveTypePublicId: string;
   leaveTypeCode: string;
   leaveTypeName: string;
-  year: number;
+  calendarYear: number;
   totalAllocated: number;
-  carriedForward: number;
   usedDays: number;
   pendingApprovalDays: number;
   availableBalance: number;
   version?: number;
+  updatedAt?: string;
 }
 
 export interface AllocateLeaveBalanceRequest {
   employeePublicId: string;
   leaveTypePublicId: string;
-  year: number;
+  calendarYear: number;
   allocatedDays: number;
-  reason?: string;
+  remarks?: string;
 }
 
 export interface AdjustLeaveBalanceRequest {
@@ -98,55 +106,108 @@ export interface AdjustLeaveBalanceRequest {
 
 export interface LeaveBalanceTransaction {
   publicId: string;
-  leaveTypePublicId: string;
+  employeePublicId: string;
+  employeeNumber: string;
+  employeeName: string;
+  leaveTypeCode: string;
   leaveTypeName: string;
   transactionType: LeaveTransactionType;
   days: number;
+  balanceBefore: number;
   balanceAfter: number;
-  reason: string;
-  referenceApplicationPublicId?: string;
-  performedBy: string;
-  transactionTimestamp: string;
+  referenceId?: string | null;
+  remarks?: string | null;
+  actorUsername: string;
+  createdAt: string;
 }
 
 export interface LeaveApprovalStep {
+  publicId: string;
   stepNumber: number;
-  stepName: string;
-  approverRoleOrUserId?: string;
-  approverName?: string;
+  approverRole: ApproverRole;
+  assignedApproverEmployeePublicId?: string | null;
+  assignedApproverName?: string | null;
+  actionTakenByUsername?: string | null;
   status: LeaveApprovalStatus;
-  actionTakenByUsername?: string;
-  comments?: string;
-  decisionTimestamp?: string;
+  decisionTimestamp?: string | null;
+  comments?: string | null;
+  rejectionReason?: string | null;
+}
+
+export interface LeaveApprovalInboxItem {
+  approvalStepPublicId: string;
+  applicationPublicId: string;
+  employeePublicId: string;
+  employeeNumber: string;
+  employeeName: string;
+  departmentName?: string | null;
+  leaveTypePublicId: string;
+  leaveTypeCode: string;
+  leaveTypeName: string;
+  paid: boolean;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  halfDay: boolean;
+  halfDayPeriod?: HalfDayPeriod | null;
+  reason: string;
+  contactPhoneDuringLeave?: string | null;
+  documentStorageKey?: string | null;
+  stepNumber: number;
+  requiredStepsCount: number;
+  approverRole: ApproverRole;
+  assignedApproverEmployeePublicId?: string | null;
+  assignedApproverName?: string | null;
+  stepStatus: LeaveApprovalStatus;
+  appliedAt: string;
 }
 
 export interface LeaveApplication {
   publicId: string;
-  applicationNumber: string;
   employeePublicId: string;
-  employeeName: string;
   employeeNumber: string;
-  departmentName?: string;
+  employeeName: string;
+  departmentName?: string | null;
   leaveTypePublicId: string;
   leaveTypeCode: string;
   leaveTypeName: string;
+  paid: boolean;
   startDate: string;
   endDate: string;
-  halfDay: boolean;
-  halfDayPeriod?: HalfDayPeriod;
   totalDays: number;
+  halfDay: boolean;
+  halfDayPeriod?: HalfDayPeriod | null;
   reason: string;
-  emergencyContactPhone?: string;
-  documentKey?: string;
-  hasDocument: boolean;
-  documentOriginalFilename?: string;
+  contactPhoneDuringLeave?: string | null;
+  documentStorageKey?: string | null;
   status: LeaveApplicationStatus;
-  appliedAt: string;
   currentStepNumber: number;
   requiredStepsCount: number;
-  finalDecisionAt?: string;
-  finalRejectionReason?: string;
-  approvalSteps: LeaveApprovalStep[];
+  appliedAt: string;
+  finalDecisionAt?: string | null;
+  finalRejectionReason?: string | null;
+  approvals: LeaveApprovalStep[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface LeaveApplicationSummary {
+  publicId: string;
+  employeePublicId: string;
+  employeeNumber: string;
+  employeeName: string;
+  departmentName?: string | null;
+  leaveTypeCode: string;
+  leaveTypeName: string;
+  paid: boolean;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  halfDay: boolean;
+  status: LeaveApplicationStatus;
+  currentStepNumber: number;
+  requiredStepsCount: number;
+  appliedAt: string;
 }
 
 export interface ApplyLeaveRequest {
@@ -157,8 +218,8 @@ export interface ApplyLeaveRequest {
   halfDay: boolean;
   halfDayPeriod?: HalfDayPeriod;
   reason: string;
-  emergencyContactPhone?: string;
-  documentKey?: string;
+  contactPhoneDuringLeave?: string;
+  documentStorageKey?: string;
 }
 
 export interface ApproveLeaveStepRequest {
@@ -173,24 +234,31 @@ export interface RejectLeaveStepRequest {
 export interface LeaveCalendarItem {
   applicationPublicId: string;
   employeePublicId: string;
+  employeeNumber: string;
   employeeName: string;
-  departmentName?: string;
+  departmentName?: string | null;
+  leaveTypeCode: string;
   leaveTypeName: string;
+  paid: boolean;
   startDate: string;
   endDate: string;
-  halfDay: boolean;
-  halfDayPeriod?: HalfDayPeriod;
   totalDays: number;
+  halfDay: boolean;
   status: LeaveApplicationStatus;
 }
 
 export interface LeaveOverview {
-  totalApplications: number;
-  pendingApprovals: number;
-  approvedThisMonth: number;
-  employeesOnLeaveToday: number;
-  totalLeaveTypes: number;
-  recentApplications: LeaveApplication[];
+  activeLeaveTypesCount: number;
+  pendingApprovalsCount: number;
+  onLeaveTodayCount: number;
+  myAvailableLeaveBalance: number;
+  recentApplications: LeaveApplicationSummary[];
+  myBalances: LeaveBalance[];
+}
+
+export interface UploadDocumentResponse {
+  documentStorageKey: string;
+  originalFilename: string;
 }
 
 export interface PageResponse<T> {
@@ -199,20 +267,13 @@ export interface PageResponse<T> {
   totalPages: number;
   size: number;
   number: number;
-  first: boolean;
-  last: boolean;
-  empty: boolean;
+  first?: boolean;
+  last?: boolean;
+  empty?: boolean;
 }
 
 export interface LeaveFilterParams {
   page?: number;
   size?: number;
-  employeePublicId?: string;
-  departmentPublicId?: string;
-  leaveTypePublicId?: string;
   status?: LeaveApplicationStatus;
-  year?: number;
-  startDate?: string;
-  endDate?: string;
-  search?: string;
 }

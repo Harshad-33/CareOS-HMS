@@ -12,12 +12,12 @@ const MOCK_LEAVE_TYPES: LeaveType[] = [
     name: 'Casual Leave',
     description: 'Paid casual leave',
     annualAllowance: 12,
-    carryForwardAllowed: true,
+    carryForwardEnabled: true,
     maxCarryForwardDays: 5,
-    requiresDocument: false,
-    maxConsecutiveDays: 3,
-    allowHalfDay: true,
-    approvalWorkflow: 'MANAGER_THEN_HR',
+    medicalCertRequired: false,
+    minServiceDaysRequired: 0,
+    paid: true,
+    approvalWorkflowType: 'MANAGER_THEN_HR',
     approvalLevelsCount: 2,
     status: 'ACTIVE',
   },
@@ -27,12 +27,12 @@ const MOCK_LEAVE_TYPES: LeaveType[] = [
     name: 'Sick Leave',
     description: 'Medical sick leave',
     annualAllowance: 10,
-    carryForwardAllowed: false,
+    carryForwardEnabled: false,
     maxCarryForwardDays: 0,
-    requiresDocument: true,
-    maxConsecutiveDays: 7,
-    allowHalfDay: true,
-    approvalWorkflow: 'HR_ONLY',
+    medicalCertRequired: true,
+    minServiceDaysRequired: 0,
+    paid: true,
+    approvalWorkflowType: 'HR_ONLY',
     approvalLevelsCount: 1,
     status: 'ACTIVE',
   },
@@ -46,11 +46,7 @@ describe('LeaveTypeListComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [LeaveTypeListComponent],
-      providers: [
-        provideRouter([]),
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     httpMock = TestBed.inject(HttpTestingController);

@@ -1,22 +1,45 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { CanActivateFn, Router, Routes } from '@angular/router';
 import { PERMISSIONS } from '../../../core/constants/permissions.constants';
 import { permissionGuard } from '../../../core/guards/auth.guard';
+import { AuthStateService } from '../../../core/services/auth-state.service';
+
+const leaveEntryRedirectGuard: CanActivateFn = () => {
+  const authState = inject(AuthStateService);
+  const router = inject(Router);
+
+  if (
+    authState.hasAnyPermission([
+      PERMISSIONS.HOSPITAL_LEAVES_READ,
+      PERMISSIONS.HOSPITAL_LEAVES_MANAGE,
+    ])
+  ) {
+    return router.createUrlTree(['/hr/leaves/dashboard']);
+  }
+
+  if (authState.hasPermission(PERMISSIONS.HOSPITAL_LEAVES_APPROVE)) {
+    return router.createUrlTree(['/hr/leaves/inbox']);
+  }
+
+  return router.createUrlTree(['/unauthorized']);
+};
 
 export const HR_LEAVES_ROUTES: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: 'dashboard',
+    canActivate: [leaveEntryRedirectGuard],
+    children: [],
   },
   {
     path: 'dashboard',
     canActivate: [permissionGuard],
     data: {
       breadcrumb: 'Leave Dashboard',
+      requiredScope: 'HOSPITAL',
       requiredPermissions: [
-        PERMISSIONS.HR_LEAVE_VIEW_ALL,
-        PERMISSIONS.HR_LEAVE_APPROVE,
-        PERMISSIONS.HOSPITAL_USERS_MANAGE,
+        PERMISSIONS.HOSPITAL_LEAVES_READ,
+        PERMISSIONS.HOSPITAL_LEAVES_MANAGE,
       ],
     },
     loadComponent: () =>
@@ -29,9 +52,10 @@ export const HR_LEAVES_ROUTES: Routes = [
     canActivate: [permissionGuard],
     data: {
       breadcrumb: 'Leave Policies',
+      requiredScope: 'HOSPITAL',
       requiredPermissions: [
-        PERMISSIONS.HR_LEAVE_MANAGE_POLICY,
-        PERMISSIONS.HOSPITAL_USERS_MANAGE,
+        PERMISSIONS.HOSPITAL_LEAVES_READ,
+        PERMISSIONS.HOSPITAL_LEAVES_MANAGE,
       ],
     },
     loadComponent: () =>
@@ -44,9 +68,10 @@ export const HR_LEAVES_ROUTES: Routes = [
     canActivate: [permissionGuard],
     data: {
       breadcrumb: 'Balance Management',
+      requiredScope: 'HOSPITAL',
       requiredPermissions: [
-        PERMISSIONS.HR_LEAVE_MANAGE_BALANCES,
-        PERMISSIONS.HOSPITAL_USERS_MANAGE,
+        PERMISSIONS.HOSPITAL_LEAVES_READ,
+        PERMISSIONS.HOSPITAL_LEAVES_MANAGE,
       ],
     },
     loadComponent: () =>
@@ -59,10 +84,8 @@ export const HR_LEAVES_ROUTES: Routes = [
     canActivate: [permissionGuard],
     data: {
       breadcrumb: 'Approval Inbox',
-      requiredPermissions: [
-        PERMISSIONS.HR_LEAVE_APPROVE,
-        PERMISSIONS.HOSPITAL_USERS_MANAGE,
-      ],
+      requiredScope: 'HOSPITAL',
+      requiredPermissions: [PERMISSIONS.HOSPITAL_LEAVES_APPROVE],
     },
     loadComponent: () =>
       import('./components/approval-inbox/approval-inbox.component').then(
@@ -74,9 +97,10 @@ export const HR_LEAVES_ROUTES: Routes = [
     canActivate: [permissionGuard],
     data: {
       breadcrumb: 'Leave Calendar',
+      requiredScope: 'HOSPITAL',
       requiredPermissions: [
-        PERMISSIONS.HR_LEAVE_VIEW_ALL,
-        PERMISSIONS.HOSPITAL_WORKSPACE_READ,
+        PERMISSIONS.HOSPITAL_LEAVES_READ,
+        PERMISSIONS.HOSPITAL_LEAVES_MANAGE,
       ],
     },
     loadComponent: () =>

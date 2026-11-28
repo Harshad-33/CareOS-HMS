@@ -73,10 +73,11 @@ export const routes: Routes = [
         canActivate: [permissionGuard],
         data: {
           breadcrumb: 'Leave Management',
+          requiredScope: 'HOSPITAL',
           requiredPermissions: [
-            PERMISSIONS.HR_LEAVE_VIEW_ALL,
-            PERMISSIONS.HR_LEAVE_APPROVE,
-            PERMISSIONS.HOSPITAL_USERS_MANAGE,
+            PERMISSIONS.HOSPITAL_LEAVES_READ,
+            PERMISSIONS.HOSPITAL_LEAVES_APPROVE,
+            PERMISSIONS.HOSPITAL_LEAVES_MANAGE,
           ],
         },
         loadChildren: () =>
@@ -87,10 +88,10 @@ export const routes: Routes = [
         canActivate: [permissionGuard],
         data: {
           breadcrumb: 'My Leaves',
+          requiredScope: 'HOSPITAL',
           requiredPermissions: [
-            PERMISSIONS.HR_LEAVE_VIEW_SELF,
-            PERMISSIONS.HR_PORTAL_ACCESS,
-            PERMISSIONS.HOSPITAL_WORKSPACE_READ,
+            PERMISSIONS.HOSPITAL_HR_SELF_SERVICE,
+            PERMISSIONS.HOSPITAL_LEAVES_APPLY,
           ],
         },
         loadComponent: () =>

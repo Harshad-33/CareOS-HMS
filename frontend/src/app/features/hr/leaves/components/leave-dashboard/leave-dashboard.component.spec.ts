@@ -6,35 +6,31 @@ import { LeaveOverview } from '../../models/leave.models';
 import { LeaveDashboardComponent } from './leave-dashboard.component';
 
 const MOCK_OVERVIEW: LeaveOverview = {
-  totalApplications: 15,
-  pendingApprovals: 3,
-  approvedThisMonth: 8,
-  employeesOnLeaveToday: 2,
-  totalLeaveTypes: 4,
+  activeLeaveTypesCount: 4,
+  pendingApprovalsCount: 3,
+  onLeaveTodayCount: 2,
+  myAvailableLeaveBalance: 14.5,
   recentApplications: [
     {
-      publicId: 'app-1',
-      applicationNumber: 'LA-2026-0001',
+      publicId: 'app-10002233',
       employeePublicId: 'emp-1',
-      employeeName: 'John Doe',
       employeeNumber: 'EMP-001',
+      employeeName: 'John Doe',
       departmentName: 'Cardiology',
-      leaveTypePublicId: 'lt-1',
       leaveTypeCode: 'CASUAL',
       leaveTypeName: 'Casual Leave',
+      paid: true,
       startDate: '2026-08-01',
       endDate: '2026-08-03',
-      halfDay: false,
       totalDays: 3,
-      reason: 'Personal family event',
-      hasDocument: false,
+      halfDay: false,
       status: 'PENDING',
-      appliedAt: '2026-07-25T10:00:00Z',
       currentStepNumber: 1,
       requiredStepsCount: 2,
-      approvalSteps: [],
+      appliedAt: '2026-07-25T10:00:00Z',
     },
   ],
+  myBalances: [],
 };
 
 describe('LeaveDashboardComponent', () => {
@@ -46,11 +42,7 @@ describe('LeaveDashboardComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [LeaveDashboardComponent],
-      providers: [
-        provideRouter([]),
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     httpMock = TestBed.inject(HttpTestingController);
@@ -62,7 +54,7 @@ describe('LeaveDashboardComponent', () => {
     httpMock.verify();
   });
 
-  it('should load and render leave overview metrics', () => {
+  it('should load and render leave overview metrics matching backend LeaveOverviewResponse', () => {
     fixture = TestBed.createComponent(LeaveDashboardComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -71,17 +63,19 @@ describe('LeaveDashboardComponent', () => {
     req.flush({ success: true, data: MOCK_OVERVIEW });
     fixture.detectChanges();
 
-    expect(component.overview()?.pendingApprovals).toBe(3);
-    expect(component.overview()?.employeesOnLeaveToday).toBe(2);
+    expect(component.overview()?.pendingApprovalsCount).toBe(3);
+    expect(component.overview()?.onLeaveTodayCount).toBe(2);
+    expect(component.overview()?.activeLeaveTypesCount).toBe(4);
     expect(component.overview()?.recentApplications.length).toBe(1);
 
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Pending Approvals');
     expect(el.textContent).toContain('On Leave Today');
-    expect(el.textContent).toContain('LA-2026-0001');
+    expect(el.textContent).toContain('14.5');
+    expect(el.textContent).toContain('app-1000');
   });
 
-  it('should navigate to approval inbox when clicking pending approvals card', () => {
+  it('should navigate to approval inbox when navigating to inbox route', () => {
     fixture = TestBed.createComponent(LeaveDashboardComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();

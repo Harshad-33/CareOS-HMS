@@ -7,13 +7,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
+import { EmployeeSummary } from '../../../../employees/models/employee.model';
 import {
   AdjustLeaveBalanceRequest,
   AllocateLeaveBalanceRequest,
   LeaveBalance,
   LeaveType,
 } from '../../models/leave.models';
-import { EmployeeSummary } from '../../../../employees/models/employee.model';
 
 export type BalanceDialogMode = 'ALLOCATE' | 'ADJUST';
 
@@ -91,18 +91,28 @@ export interface LeaveBalanceDialogData {
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="flex-1">
-                <mat-label>Year</mat-label>
-                <input matInput type="number" formControlName="year" min="2020" max="2100" />
-                <mat-error *ngIf="form.get('year')?.hasError('required')">Required</mat-error>
+                <mat-label>Calendar Year</mat-label>
+                <input matInput type="number" formControlName="calendarYear" min="2020" max="2100" />
+                <mat-error *ngIf="form.get('calendarYear')?.hasError('required')">Required</mat-error>
               </mat-form-field>
             </div>
 
             <mat-form-field appearance="outline" class="w-full">
               <mat-label>Days to Allocate</mat-label>
-              <input matInput type="number" formControlName="allocatedDays" min="0.5" max="365" step="0.5" />
+              <input matInput type="number" formControlName="allocatedDays" min="0" max="365" step="0.5" />
               <mat-error *ngIf="form.get('allocatedDays')?.hasError('required')">
                 Allocated days is required
               </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Allocation Remarks (Optional)</mat-label>
+              <textarea
+                matInput
+                rows="2"
+                formControlName="remarks"
+                placeholder="e.g. Initial annual entitlement"
+              ></textarea>
             </mat-form-field>
           </ng-container>
 
@@ -116,21 +126,20 @@ export interface LeaveBalanceDialogData {
                 Adjustment days is required
               </mat-error>
             </mat-form-field>
-          </ng-container>
 
-          <!-- Reason Field (Mandatory for Adjust, Optional for Allocate) -->
-          <mat-form-field appearance="outline" class="w-full">
-            <mat-label>{{ isAdjust ? 'Adjustment Reason (Mandatory)' : 'Allocation Reason (Optional)' }}</mat-label>
-            <textarea
-              matInput
-              rows="2"
-              formControlName="reason"
-              placeholder="{{ isAdjust ? 'e.g. Compensation for overtime, correction' : 'e.g. Initial annual entitlement' }}"
-            ></textarea>
-            <mat-error *ngIf="form.get('reason')?.hasError('required')">
-              Reason is required for manual adjustments
-            </mat-error>
-          </mat-form-field>
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Adjustment Reason (Mandatory)</mat-label>
+              <textarea
+                matInput
+                rows="2"
+                formControlName="reason"
+                placeholder="e.g. Compensation for overtime, correction"
+              ></textarea>
+              <mat-error *ngIf="form.get('reason')?.hasError('required')">
+                Reason is required for manual adjustments
+              </mat-error>
+            </mat-form-field>
+          </ng-container>
         </mat-dialog-content>
 
         <mat-dialog-actions align="end">
@@ -143,21 +152,9 @@ export interface LeaveBalanceDialogData {
     </div>
   `,
   styles: [`
-    .dialog-container {
-      padding: 8px 16px;
-      min-width: 440px;
-      max-width: 520px;
-    }
-    .dialog-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-    .dialog-header h2 {
-      margin: 0;
-      font-size: 1.2rem;
-    }
+    .dialog-container { padding: 8px 16px; min-width: 440px; max-width: 520px; }
+    .dialog-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .dialog-header h2 { margin: 0; font-size: 1.2rem; }
     .balance-summary-box {
       background: #e3f2fd;
       border: 1px solid #bbdefb;
@@ -168,22 +165,10 @@ export interface LeaveBalanceDialogData {
       flex-direction: column;
       gap: 4px;
     }
-    .summary-item {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.85rem;
-    }
-    .summary-item .label {
-      color: #555;
-    }
-    .summary-item .value {
-      color: #111;
-      font-weight: 500;
-    }
-    .form-row {
-      display: flex;
-      gap: 12px;
-    }
+    .summary-item { display: flex; justify-content: space-between; font-size: 0.85rem; }
+    .summary-item .label { color: #555; }
+    .summary-item .value { color: #111; font-weight: 500; }
+    .form-row { display: flex; gap: 12px; }
     .flex-1 { flex: 1; }
     .flex-2 { flex: 2; }
     .w-full { width: 100%; margin-bottom: 4px; }
@@ -214,9 +199,9 @@ export class LeaveBalanceDialogComponent implements OnInit {
       this.form = this.fb.group({
         employeePublicId: ['', [Validators.required]],
         leaveTypePublicId: ['', [Validators.required]],
-        year: [currentYear, [Validators.required, Validators.min(2020), Validators.max(2100)]],
-        allocatedDays: [null, [Validators.required, Validators.min(0.5), Validators.max(365)]],
-        reason: ['', [Validators.maxLength(255)]],
+        calendarYear: [currentYear, [Validators.required, Validators.min(2020), Validators.max(2100)]],
+        allocatedDays: [null, [Validators.required, Validators.min(0), Validators.max(365)]],
+        remarks: ['', [Validators.maxLength(255)]],
       });
     }
   }
@@ -235,9 +220,9 @@ export class LeaveBalanceDialogComponent implements OnInit {
       const allocReq: AllocateLeaveBalanceRequest = {
         employeePublicId: value.employeePublicId,
         leaveTypePublicId: value.leaveTypePublicId,
-        year: Number(value.year),
+        calendarYear: Number(value.calendarYear),
         allocatedDays: Number(value.allocatedDays),
-        reason: value.reason ? value.reason.trim() : undefined,
+        remarks: value.remarks ? value.remarks.trim() : undefined,
       };
       this.dialogRef.close(allocReq);
     }

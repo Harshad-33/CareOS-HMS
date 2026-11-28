@@ -2,48 +2,43 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { LeaveApplication, LeaveBalance, LeaveType } from '../../models/leave.models';
+import { LeaveApplicationSummary, LeaveBalance } from '../../models/leave.models';
 import { MyLeavesComponent } from './my-leaves.component';
 
 const MOCK_BALANCES: LeaveBalance[] = [
   {
     publicId: 'lb-1',
     employeePublicId: 'emp-1',
-    employeeName: 'Jane Doe',
     employeeNumber: 'EMP-001',
+    employeeName: 'Jane Doe',
     leaveTypePublicId: 'lt-1',
     leaveTypeCode: 'CASUAL',
     leaveTypeName: 'Casual Leave',
-    year: 2026,
+    calendarYear: 2026,
     totalAllocated: 12,
-    carriedForward: 0,
     usedDays: 2,
     pendingApprovalDays: 1,
     availableBalance: 9,
   },
 ];
 
-const MOCK_APPLICATIONS: LeaveApplication[] = [
+const MOCK_APPLICATIONS: LeaveApplicationSummary[] = [
   {
-    publicId: 'app-1',
-    applicationNumber: 'LA-2026-0001',
+    publicId: 'app-11223344',
     employeePublicId: 'emp-1',
-    employeeName: 'Jane Doe',
     employeeNumber: 'EMP-001',
-    leaveTypePublicId: 'lt-1',
+    employeeName: 'Jane Doe',
     leaveTypeCode: 'CASUAL',
     leaveTypeName: 'Casual Leave',
+    paid: true,
     startDate: '2026-08-10',
     endDate: '2026-08-11',
-    halfDay: false,
     totalDays: 2,
-    reason: 'Personal errands',
-    hasDocument: false,
+    halfDay: false,
     status: 'PENDING',
-    appliedAt: '2026-07-28T09:00:00Z',
     currentStepNumber: 1,
     requiredStepsCount: 2,
-    approvalSteps: [],
+    appliedAt: '2026-07-28T09:00:00Z',
   },
 ];
 
@@ -55,11 +50,7 @@ describe('MyLeavesComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [MyLeavesComponent],
-      providers: [
-        provideRouter([]),
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     httpMock = TestBed.inject(HttpTestingController);
@@ -102,7 +93,7 @@ describe('MyLeavesComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Casual Leave');
     expect(el.textContent).toContain('9');
-    expect(el.textContent).toContain('LA-2026-0001');
+    expect(el.textContent).toContain('app-1122');
     expect(el.textContent).toContain('PENDING');
   });
 });

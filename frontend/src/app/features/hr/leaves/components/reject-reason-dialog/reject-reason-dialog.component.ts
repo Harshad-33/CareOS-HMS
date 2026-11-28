@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { RejectLeaveStepRequest } from '../../models/leave.models';
 
 export interface RejectReasonDialogData {
-  applicationNumber: string;
+  applicationLabel: string;
   stepNumber: number;
 }
 
@@ -34,7 +34,7 @@ export interface RejectReasonDialogData {
       </div>
 
       <p class="subtitle">
-        You are rejecting Step {{ data.stepNumber }} of application <strong>{{ data.applicationNumber }}</strong>.
+        You are rejecting Step {{ data.stepNumber }} of application <strong>{{ data.applicationLabel }}</strong>.
         A rejection reason is mandatory.
       </p>
 
@@ -52,13 +52,16 @@ export interface RejectReasonDialogData {
               Rejection reason is required
             </mat-error>
             <mat-error *ngIf="form.get('rejectionReason')?.hasError('maxlength')">
-              Reason cannot exceed 500 characters
+              Reason cannot exceed 255 characters
             </mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="w-full">
             <mat-label>Internal Comments (Optional)</mat-label>
             <input matInput formControlName="comments" placeholder="Additional notes for HR/management..." />
+            <mat-error *ngIf="form.get('comments')?.hasError('maxlength')">
+              Comments cannot exceed 255 characters
+            </mat-error>
           </mat-form-field>
         </mat-dialog-content>
 
@@ -72,28 +75,11 @@ export interface RejectReasonDialogData {
     </div>
   `,
   styles: [`
-    .dialog-container {
-      padding: 8px 16px;
-      min-width: 420px;
-    }
-    .dialog-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .dialog-header h2 {
-      margin: 0;
-      font-size: 1.2rem;
-    }
-    .subtitle {
-      font-size: 0.9rem;
-      color: #616161;
-      margin: 8px 0 16px 0;
-    }
-    .w-full {
-      width: 100%;
-      margin-bottom: 8px;
-    }
+    .dialog-container { padding: 8px 16px; min-width: 420px; }
+    .dialog-header { display: flex; align-items: center; gap: 8px; }
+    .dialog-header h2 { margin: 0; font-size: 1.2rem; }
+    .subtitle { font-size: 0.9rem; color: #616161; margin: 8px 0 16px 0; }
+    .w-full { width: 100%; margin-bottom: 8px; }
   `],
 })
 export class RejectReasonDialogComponent {
@@ -102,8 +88,8 @@ export class RejectReasonDialogComponent {
   private readonly fb = inject(FormBuilder);
 
   readonly form = this.fb.group({
-    rejectionReason: ['', [Validators.required, Validators.maxLength(500)]],
-    comments: ['', [Validators.maxLength(500)]],
+    rejectionReason: ['', [Validators.required, Validators.maxLength(255)]],
+    comments: ['', [Validators.maxLength(255)]],
   });
 
   submit(): void {

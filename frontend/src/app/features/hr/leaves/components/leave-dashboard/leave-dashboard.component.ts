@@ -8,12 +8,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
-import { LeaveApplication, LeaveOverview, LeaveType } from '../../models/leave.models';
-import { LeaveService } from '../../services/leave.service';
+import { PERMISSIONS } from '../../../../../core/constants/permissions.constants';
+import { AuthStateService } from '../../../../../core/services/auth-state.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
-import { PageHeaderComponent } from '../../../../../shared/components/page-header/page-header';
-import { LoadingIndicatorComponent } from '../../../../../shared/components/loading-indicator/loading-indicator';
 import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state';
+import { LoadingIndicatorComponent } from '../../../../../shared/components/loading-indicator/loading-indicator';
+import { PageHeaderComponent } from '../../../../../shared/components/page-header/page-header';
+import { LeaveApplicationSummary, LeaveOverview } from '../../models/leave.models';
+import { LeaveService } from '../../services/leave.service';
 import { LeaveDetailDialogComponent } from '../leave-detail-dialog/leave-detail-dialog.component';
 
 @Component({
@@ -37,7 +39,12 @@ import { LeaveDetailDialogComponent } from '../leave-detail-dialog/leave-detail-
         title="Leave Management Dashboard"
         subtitle="Overview of hospital leave requests, active approvals, clinical staffing coverage, and policy management"
       >
-        <button mat-flat-button color="primary" (click)="router.navigate(['/hr/leaves/inbox'])">
+        <button
+          *ngIf="canApprove()"
+          mat-flat-button
+          color="primary"
+          (click)="router.navigate(['/hr/leaves/inbox'])"
+        >
           <mat-icon>inbox</mat-icon> Approval Inbox
         </button>
       </app-page-header>
@@ -47,12 +54,12 @@ import { LeaveDetailDialogComponent } from '../leave-detail-dialog/leave-detail-
       <ng-container *ngIf="!isLoading() && overview()">
         <!-- Metric Cards -->
         <div class="metrics-grid">
-          <mat-card class="metric-card border-blue" (click)="router.navigate(['/hr/leaves/inbox'])">
+          <mat-card class="metric-card border-blue" (click)="canApprove() && router.navigate(['/hr/leaves/inbox'])">
             <div class="card-icon-wrapper bg-blue-light">
               <mat-icon class="icon-blue">pending_actions</mat-icon>
             </div>
             <div class="metric-info">
-              <div class="metric-value">{{ overview()?.pendingApprovals ?? 0 }}</div>
+              <div class="metric-value">{{ overview()?.pendingApprovalsCount ?? 0 }}</div>
               <div class="metric-label">Pending Approvals</div>
             </div>
           </mat-card>
@@ -62,18 +69,18 @@ import { LeaveDetailDialogComponent } from '../leave-detail-dialog/leave-detail-
               <mat-icon class="icon-green">person_off</mat-icon>
             </div>
             <div class="metric-info">
-              <div class="metric-value">{{ overview()?.employeesOnLeaveToday ?? 0 }}</div>
+              <div class="metric-value">{{ overview()?.onLeaveTodayCount ?? 0 }}</div>
               <div class="metric-label">On Leave Today</div>
             </div>
           </mat-card>
 
           <mat-card class="metric-card border-teal">
             <div class="card-icon-wrapper bg-teal-light">
-              <mat-icon class="icon-teal">check_circle</mat-icon>
+              <mat-icon class="icon-teal">account_balance_wallet</mat-icon>
             </div>
             <div class="metric-info">
-              <div class="metric-value">{{ overview()?.approvedThisMonth ?? 0 }}</div>
-              <div class="metric-label">Approved This Month</div>
+              <div class="metric-value">{{ overview()?.myAvailableLeaveBalance ?? 0 }}</div>
+              <div class="metric-label">My Available Leave Days</div>
             </div>
           </mat-card>
 
@@ -82,7 +89,7 @@ import { LeaveDetailDialogComponent } from '../leave-detail-dialog/leave-detail-
               <mat-icon class="icon-purple">policy</mat-icon>
             </div>
             <div class="metric-info">
-              <div class="metric-value">{{ overview()?.totalLeaveTypes ?? 0 }}</div>
+              <div class="metric-value">{{ overview()?.activeLeaveTypesCount ?? 0 }}</div>
               <div class="metric-label">Active Leave Policies</div>
             </div>
           </mat-card>
@@ -90,7 +97,7 @@ import { LeaveDetailDialogComponent } from '../leave-detail-dialog/leave-detail-
 
         <!-- Quick Navigation Bar -->
         <div class="nav-cards-grid">
-          <div class="nav-tile" (click)="router.navigate(['/hr/leaves/inbox'])">
+          <div *ngIf="canApprove()" class="nav-tile" (click)="router.navigate(['/hr/leaves/inbox'])">
             <mat-icon class="tile-icon text-amber">inbox</mat-icon>
             <div class="tile-title">Approval Inbox</div>
             <div class="tile-sub">Review employee requests</div>
@@ -119,17 +126,17 @@ import { LeaveDetailDialogComponent } from '../leave-detail-dialog/leave-detail-
         <mat-card class="table-card">
           <mat-card-header class="table-header">
             <mat-card-title class="header-title">
-              <mat-icon>history</mat-icon> Recent Leave Applications
+              <mat-icon>history</mat-icon> My Recent Leave Applications
             </mat-card-title>
           </mat-card-header>
 
           <mat-card-content class="p-0">
             <table mat-table [dataSource]="overview()?.recentApplications || []" class="w-full">
-              <!-- Application Number -->
-              <ng-container matColumnDef="applicationNumber">
-                <th mat-header-cell *matHeaderCellDef>Application #</th>
+              <!-- Application ID -->
+              <ng-container matColumnDef="applicationId">
+                <th mat-header-cell *matHeaderCellDef>Reference</th>
                 <td mat-cell *matCellDef="let app">
-                  <span class="font-mono text-dark">{{ app.applicationNumber }}</span>
+                  <span class="font-mono text-dark">{{ app.publicId | slice:0:8 }}</span>
                   <span class="text-xs text-muted block">{{ app.appliedAt | date:'mediumDate' }}</span>
                 </td>
               </ng-container>
@@ -158,7 +165,7 @@ import { LeaveDetailDialogComponent } from '../leave-detail-dialog/leave-detail-
                   <div class="text-dark">{{ app.startDate }} to {{ app.endDate }}</div>
                   <div class="text-primary text-xs font-semibold">
                     {{ app.totalDays }} Day(s)
-                    <span *ngIf="app.halfDay">({{ app.halfDayPeriod }})</span>
+                    <span *ngIf="app.halfDay">(Half Day)</span>
                   </div>
                 </td>
               </ng-container>
@@ -310,15 +317,20 @@ export class LeaveDashboardComponent implements OnInit {
   readonly router = inject(Router);
   private readonly leaveService = inject(LeaveService);
   private readonly notificationService = inject(NotificationService);
+  private readonly authState = inject(AuthStateService);
   private readonly dialog = inject(MatDialog);
 
   readonly isLoading = signal(true);
   readonly overview = signal<LeaveOverview | null>(null);
 
-  readonly displayedColumns: string[] = ['applicationNumber', 'employee', 'leaveType', 'duration', 'status', 'actions'];
+  readonly displayedColumns: string[] = ['applicationId', 'employee', 'leaveType', 'duration', 'status', 'actions'];
 
   ngOnInit(): void {
     this.loadOverview();
+  }
+
+  canApprove(): boolean {
+    return this.authState.hasPermission(PERMISSIONS.HOSPITAL_LEAVES_APPROVE);
   }
 
   loadOverview(): void {
@@ -335,10 +347,13 @@ export class LeaveDashboardComponent implements OnInit {
     });
   }
 
-  openDetailDialog(app: LeaveApplication): void {
+  openDetailDialog(app: LeaveApplicationSummary): void {
     this.dialog.open(LeaveDetailDialogComponent, {
       width: '650px',
-      data: app,
+      data: {
+        applicationPublicId: app.publicId,
+        selfService: false,
+      },
     });
   }
 }

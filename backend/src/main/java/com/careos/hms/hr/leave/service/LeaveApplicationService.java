@@ -11,7 +11,7 @@ import com.careos.hms.hr.leave.dto.ApplyLeaveRequest;
 import com.careos.hms.hr.leave.dto.ApproveLeaveStepRequest;
 import com.careos.hms.hr.leave.dto.LeaveApplicationResponse;
 import com.careos.hms.hr.leave.dto.LeaveApplicationSummaryResponse;
-import com.careos.hms.hr.leave.dto.LeaveApprovalStepResponse;
+import com.careos.hms.hr.leave.dto.LeaveApprovalInboxItemResponse;
 import com.careos.hms.hr.leave.dto.LeaveBalanceResponse;
 import com.careos.hms.hr.leave.dto.LeaveCalendarItemResponse;
 import com.careos.hms.hr.leave.dto.LeaveOverviewResponse;
@@ -421,7 +421,7 @@ public class LeaveApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public Page<LeaveApprovalStepResponse> getPendingApprovals(Long hospitalId, Long currentUserId, boolean isHr, Pageable pageable) {
+    public Page<LeaveApprovalInboxItemResponse> getPendingApprovals(Long hospitalId, Long currentUserId, boolean isHr, Pageable pageable) {
         Employee currentEmployee = employeeRepository.findByUserIdAndDeletedFalse(currentUserId).orElse(null);
         Long approverEmpId = currentEmployee != null ? currentEmployee.getId() : -1L;
 
@@ -431,7 +431,7 @@ public class LeaveApplicationService {
                 approverEmpId,
                 isHr,
                 pageable
-        ).map(LeaveApprovalStepResponse::from);
+        ).map(LeaveApprovalInboxItemResponse::from);
     }
 
     @Transactional(readOnly = true)

@@ -295,6 +295,15 @@ public class SecurityTestDataHelper {
     }
 
     @Transactional
+    public Role createCustomRole(String code, String name, RoleScope scope, List<Permission> perms) {
+        Role role = roleRepository.saveAndFlush(new Role(code, name, name, scope, false));
+        for (Permission p : perms) {
+            rolePermissionRepository.saveAndFlush(new RolePermission(role, p));
+        }
+        return role;
+    }
+
+    @Transactional
     public Hospital createHospital(String code, String name) {
         return hospitalRepository.saveAndFlush(new Hospital(code, name));
     }

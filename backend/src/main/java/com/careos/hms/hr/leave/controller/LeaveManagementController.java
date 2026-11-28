@@ -9,7 +9,7 @@ import com.careos.hms.hr.leave.dto.ApproveLeaveStepRequest;
 import com.careos.hms.hr.leave.dto.CreateLeaveTypeRequest;
 import com.careos.hms.hr.leave.dto.LeaveApplicationResponse;
 import com.careos.hms.hr.leave.dto.LeaveApplicationSummaryResponse;
-import com.careos.hms.hr.leave.dto.LeaveApprovalStepResponse;
+import com.careos.hms.hr.leave.dto.LeaveApprovalInboxItemResponse;
 import com.careos.hms.hr.leave.dto.LeaveBalanceResponse;
 import com.careos.hms.hr.leave.dto.LeaveBalanceTransactionResponse;
 import com.careos.hms.hr.leave.dto.LeaveCalendarItemResponse;
@@ -300,7 +300,7 @@ public class LeaveManagementController {
     @GetMapping("/approvals/inbox")
     @PreAuthorize("hasAuthority('HOSPITAL_LEAVES_APPROVE') or hasRole('HOSPITAL_ADMIN') or hasRole('PLATFORM_SUPER_ADMIN')")
     @Operation(summary = "Get pending approval inbox", description = "Returns leave applications awaiting decision from the current user or HR role")
-    public ResponseEntity<ApiResponse<Page<LeaveApprovalStepResponse>>> getPendingApprovalsInbox(
+    public ResponseEntity<ApiResponse<Page<LeaveApprovalInboxItemResponse>>> getPendingApprovalsInbox(
             @PageableDefault(size = 20) Pageable pageable,
             HttpServletRequest httpServletRequest
     ) {
@@ -308,7 +308,7 @@ public class LeaveManagementController {
         boolean isHr = principal.isPlatformUser()
                 || principal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("HOSPITAL_LEAVES_APPROVE") || a.getAuthority().equals("ROLE_HOSPITAL_ADMIN"));
 
-        Page<LeaveApprovalStepResponse> page = leaveApplicationService.getPendingApprovals(
+        Page<LeaveApprovalInboxItemResponse> page = leaveApplicationService.getPendingApprovals(
                 principal.getHospitalId(),
                 principal.getUserId(),
                 isHr,

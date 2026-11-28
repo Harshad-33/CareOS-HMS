@@ -20,6 +20,11 @@ import com.careos.hms.hr.leave.dto.RejectLeaveStepRequest;
 import com.careos.hms.hr.leave.dto.UpdateLeaveTypeRequest;
 import com.careos.hms.hr.leave.entity.HalfDayPeriod;
 import com.careos.hms.hr.leave.entity.LeaveApprovalWorkflowType;
+import com.careos.hms.hr.leave.entity.LeaveBalance;
+import com.careos.hms.hr.leave.repository.LeaveBalanceRepository;
+import com.careos.hms.permission.entity.PermissionCode;
+import com.careos.hms.role.entity.Role;
+import com.careos.hms.role.entity.RoleScope;
 import com.careos.hms.security.LoginRateLimiterService;
 import com.careos.hms.user.entity.UserScope;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -30,16 +35,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -65,6 +76,10 @@ class LeaveManagementIntegrationTest {
     @Autowired
     private LoginRateLimiterService rateLimiterService;
 
+    @Autowired
+    private LeaveBalanceRepository leaveBalanceRepository;
+
+    private SecurityTestDataHelper.SeededRbac seededRbac;
     private Hospital hospitalA;
     private Hospital hospitalB;
     private String adminTokenA;
@@ -81,7 +96,8 @@ class LeaveManagementIntegrationTest {
     void setUp() throws Exception {
         rateLimiterService.resetAll();
         testDataHelper.resetSecurityTables();
-        SecurityTestDataHelper.SeededRbac rbac = testDataHelper.seedRbacCatalog();
+        seededRbac = testDataHelper.seedRbacCatalog();
+        SecurityTestDataHelper.SeededRbac rbac = seededRbac;
 
         hospitalA = testDataHelper.createHospital("HOSP-ALPHA", "Hospital Alpha");
         hospitalB = testDataHelper.createHospital("HOSP-BETA", "Hospital Beta");
@@ -642,5 +658,361 @@ class LeaveManagementIntegrationTest {
         mockMvc.perform(get("/api/v1/hr/management/leaves/balances/employees/" + staffEmployeePubId)
                         .header("Authorization", "Bearer " + adminTokenB))
                 .andExpect(status().isNotFound());
+
+        // Hospital B Admin CANNOT download Hospital A's leave document
+        mockMvc.perform(get("/api/v1/hr/management/leaves/applications/" + appPubId + "/document")
+                        .header("Authorization", "Bearer " + adminTokenB))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testDuplicateStepApprovalAndRepeatedFinalApprovalCannotDoubleDebitBalance() throws Exception {
+        CreateLeaveTypeRequest typeReq = new CreateLeaveTypeRequest(
+                "DUP_TEST", "Annual Leave", "Two-step leave",
+                10, false, 0, false, 0, true,
+                LeaveApprovalWorkflowType.MANAGER_THEN_HR, 2
+        );
+        MvcResult typeRes = mockMvc.perform(post("/api/v1/hr/management/leaves/types")
+                        .header("Authorization", "Bearer " + adminTokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(typeReq)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String leaveTypePubId = objectMapper.readTree(typeRes.getResponse().getContentAsString()).path("data").path("publicId").asText();
+
+        int year = LocalDate.now().getYear();
+        mockMvc.perform(post("/api/v1/hr/management/leaves/balances/allocate")
+                        .header("Authorization", "Bearer " + adminTokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new AllocateLeaveBalanceRequest(
+                                staffEmployeePubId, leaveTypePubId, year, BigDecimal.valueOf(10.0), "Init"
+                        ))))
+                .andExpect(status().isOk());
+
+        MvcResult applyRes = mockMvc.perform(post("/api/v1/hr/self/leaves/apply")
+                        .header("Authorization", "Bearer " + employeeToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ApplyLeaveRequest(
+                                null, leaveTypePubId,
+                                LocalDate.of(year, 6, 10), LocalDate.of(year, 6, 11),
+                                false, null, "Duplicate approval check", null, null
+                        ))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String appPubId = objectMapper.readTree(applyRes.getResponse().getContentAsString()).path("data").path("publicId").asText();
+
+        // HR cannot override assigned reporting manager on Step 1
+        mockMvc.perform(post("/api/v1/hr/management/leaves/applications/" + appPubId + "/steps/1/approve")
+                        .header("Authorization", "Bearer " + adminTokenA))
+                .andExpect(status().isForbidden());
+
+        // Manager inbox returns full LeaveApprovalInboxItemResponse including applicationPublicId
+        mockMvc.perform(get("/api/v1/hr/management/leaves/approvals/inbox")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].applicationPublicId").value(appPubId))
+                .andExpect(jsonPath("$.data.content[0].stepNumber").value(1))
+                .andExpect(jsonPath("$.data.content[0].requiredStepsCount").value(2))
+                .andExpect(jsonPath("$.data.content[0].employeeName").value("John Doe"));
+
+        // Step 1 approved by reporting manager
+        mockMvc.perform(post("/api/v1/hr/management/leaves/applications/" + appPubId + "/steps/1/approve")
+                        .header("Authorization", "Bearer " + managerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ApproveLeaveStepRequest("Step 1 OK"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.currentStepNumber").value(2));
+
+        // Duplicate approval of Step 1 is rejected (400)
+        mockMvc.perform(post("/api/v1/hr/management/leaves/applications/" + appPubId + "/steps/1/approve")
+                        .header("Authorization", "Bearer " + managerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ApproveLeaveStepRequest("Duplicate step 1"))))
+                .andExpect(status().isBadRequest());
+
+        // Step 2 (final) approved by HR Admin
+        mockMvc.perform(post("/api/v1/hr/management/leaves/applications/" + appPubId + "/steps/2/approve")
+                        .header("Authorization", "Bearer " + adminTokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ApproveLeaveStepRequest("Final OK"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+
+        // Repeated final approval of Step 2 is rejected (400) and does NOT debit balance twice
+        mockMvc.perform(post("/api/v1/hr/management/leaves/applications/" + appPubId + "/steps/2/approve")
+                        .header("Authorization", "Bearer " + adminTokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ApproveLeaveStepRequest("Duplicate final"))))
+                .andExpect(status().isBadRequest());
+
+        // Verify balance debited exactly once (used = 2.0, available = 8.0, pending = 0.0)
+        mockMvc.perform(get("/api/v1/hr/self/leaves/balances?year=" + year)
+                        .header("Authorization", "Bearer " + employeeToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].usedDays").value(2.0))
+                .andExpect(jsonPath("$.data[0].availableBalance").value(8.0))
+                .andExpect(jsonPath("$.data[0].pendingApprovalDays").value(0.0));
+
+        // Verify ledger has exactly 2 transactions: 1 ALLOCATION + 1 DEBIT_APPROVED_LEAVE
+        mockMvc.perform(get("/api/v1/hr/self/leaves/balances/transactions")
+                        .header("Authorization", "Bearer " + employeeToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                .andExpect(jsonPath("$.data.content[0].transactionType").value("DEBIT_APPROVED_LEAVE"))
+                .andExpect(jsonPath("$.data.content[1].transactionType").value("ALLOCATION"));
+    }
+
+    @Test
+    void testSameHospitalEmployeeSelfServiceAndDocumentIsolationAndUnauthorizedAccess() throws Exception {
+        // Seed non-admin roles matching V9 RBAC
+        Role staffRole = testDataHelper.createCustomRole(
+                "STAFF_SELF_SERVICE",
+                "Staff Self Service",
+                RoleScope.HOSPITAL,
+                List.of(
+                        seededRbac.permissions().get(PermissionCode.HOSPITAL_HR_SELF_SERVICE),
+                        seededRbac.permissions().get(PermissionCode.HOSPITAL_LEAVES_APPLY),
+                        seededRbac.permissions().get(PermissionCode.HOSPITAL_WORKSPACE_READ)
+                )
+        );
+        Role viewerRole = testDataHelper.createCustomRole(
+                "WORKSPACE_VIEWER",
+                "Workspace Viewer",
+                RoleScope.HOSPITAL,
+                List.of(seededRbac.permissions().get(PermissionCode.HOSPITAL_WORKSPACE_READ))
+        );
+        Role approverOnlyRole = testDataHelper.createCustomRole(
+                "APPROVER_ONLY",
+                "Approver Only",
+                RoleScope.HOSPITAL,
+                List.of(
+                        seededRbac.permissions().get(PermissionCode.HOSPITAL_HR_SELF_SERVICE),
+                        seededRbac.permissions().get(PermissionCode.HOSPITAL_LEAVES_APPLY),
+                        seededRbac.permissions().get(PermissionCode.HOSPITAL_LEAVES_APPROVE)
+                )
+        );
+
+        // Create Employee A and Employee B in Hospital A with STAFF_SELF_SERVICE only (NO admin role)
+        CreateEmployeeRequest empAReq = new CreateEmployeeRequest(
+                "Priya", null, "Sharma",
+                LocalDate.of(1993, 4, 12), EmployeeGender.FEMALE, "A_POSITIVE",
+                "priya.sharma@careos.local", "+919876543230", null,
+                "Addr A", null, "City", "Dist", "State", "India", "110001",
+                "Contact A", "Spouse", "+919876543231",
+                "Lab Tech", deptPublicIdA, branchPublicIdA, EmploymentType.FULL_TIME,
+                LocalDate.of(2023, 1, 15), null, managerEmployeePubId,
+                true, "emp.priya", TEST_PASSWORD, Set.of(staffRole.getCode())
+        );
+        mockMvc.perform(post("/api/v1/employees")
+                        .header("Authorization", "Bearer " + adminTokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(empAReq)))
+                .andExpect(status().isCreated());
+        String empAToken = loginAndExtractToken("emp.priya");
+
+        CreateEmployeeRequest empBReq = new CreateEmployeeRequest(
+                "Rahul", null, "Verma",
+                LocalDate.of(1991, 9, 18), EmployeeGender.MALE, "O_POSITIVE",
+                "rahul.verma@careos.local", "+919876543240", null,
+                "Addr B", null, "City", "Dist", "State", "India", "110001",
+                "Contact B", "Parent", "+919876543241",
+                "Pharmacist", deptPublicIdA, branchPublicIdA, EmploymentType.FULL_TIME,
+                LocalDate.of(2022, 6, 1), null, managerEmployeePubId,
+                true, "emp.rahul", TEST_PASSWORD, Set.of(staffRole.getCode())
+        );
+        MvcResult empBRes = mockMvc.perform(post("/api/v1/employees")
+                        .header("Authorization", "Bearer " + adminTokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(empBReq)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String empBPubId = objectMapper.readTree(empBRes.getResponse().getContentAsString()).path("data").path("publicId").asText();
+        String empBToken = loginAndExtractToken("emp.rahul");
+
+        // Unrelated manager with HOSPITAL_LEAVES_APPROVE (not Rahul's reporting manager)
+        CreateEmployeeRequest otherMgrReq = new CreateEmployeeRequest(
+                "Other", null, "Supervisor",
+                LocalDate.of(1982, 2, 10), EmployeeGender.MALE, "B_POSITIVE",
+                "other.mgr@careos.local", "+919876543250", null,
+                "Addr C", null, "City", "Dist", "State", "India", "110001",
+                "Contact C", "Spouse", "+919876543251",
+                "Supervisor", deptPublicIdA, branchPublicIdA, EmploymentType.FULL_TIME,
+                LocalDate.of(2021, 1, 1), null, null,
+                true, "other.mgr", TEST_PASSWORD, Set.of(approverOnlyRole.getCode())
+        );
+        mockMvc.perform(post("/api/v1/employees")
+                        .header("Authorization", "Bearer " + adminTokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(otherMgrReq)))
+                .andExpect(status().isCreated());
+        String otherMgrToken = loginAndExtractToken("other.mgr");
+
+        // Viewer user with zero leave permissions
+        testDataHelper.createUser(
+                hospitalA,
+                UserScope.HOSPITAL,
+                "viewer.alpha",
+                "viewer.alpha@careos.local",
+                TEST_PASSWORD,
+                viewerRole
+        );
+        String viewerToken = loginAndExtractToken("viewer.alpha");
+
+        // Admin creates Medical Leave type and allocates balance to Employee B
+        CreateLeaveTypeRequest medTypeReq = new CreateLeaveTypeRequest(
+                "MED_ISO", "Medical Leave", "Requires cert",
+                12, false, 0, true, 0, true,
+                LeaveApprovalWorkflowType.MANAGER_THEN_HR, 2
+        );
+        MvcResult typeRes = mockMvc.perform(post("/api/v1/hr/management/leaves/types")
+                        .header("Authorization", "Bearer " + adminTokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(medTypeReq)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String leaveTypePubId = objectMapper.readTree(typeRes.getResponse().getContentAsString()).path("data").path("publicId").asText();
+
+        int year = LocalDate.now().getYear();
+        mockMvc.perform(post("/api/v1/hr/management/leaves/balances/allocate")
+                        .header("Authorization", "Bearer " + adminTokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new AllocateLeaveBalanceRequest(
+                                empBPubId, leaveTypePubId, year, BigDecimal.valueOf(12.0), "Annual"
+                        ))))
+                .andExpect(status().isOk());
+
+        // Employee B uploads medical certificate via self-service
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "medical_cert.pdf",
+                MediaType.APPLICATION_PDF_VALUE,
+                "PDF-CONTENT".getBytes(StandardCharsets.UTF_8)
+        );
+        MvcResult uploadRes = mockMvc.perform(multipart("/api/v1/hr/self/leaves/upload-document")
+                        .file(file)
+                        .header("Authorization", "Bearer " + empBToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.documentStorageKey").isNotEmpty())
+                .andReturn();
+        String docKey = objectMapper.readTree(uploadRes.getResponse().getContentAsString())
+                .path("data").path("documentStorageKey").asText();
+
+        // Employee B submits 3-day medical leave with uploaded document
+        MvcResult applyRes = mockMvc.perform(post("/api/v1/hr/self/leaves/apply")
+                        .header("Authorization", "Bearer " + empBToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ApplyLeaveRequest(
+                                null, leaveTypePubId,
+                                LocalDate.of(year, 5, 10), LocalDate.of(year, 5, 12),
+                                false, null, "Surgery recovery", "+919876543240", docKey
+                        ))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String appBPubId = objectMapper.readTree(applyRes.getResponse().getContentAsString())
+                .path("data").path("publicId").asText();
+
+        // Employee B CAN read own application and download own document
+        mockMvc.perform(get("/api/v1/hr/self/leaves/applications/" + appBPubId)
+                        .header("Authorization", "Bearer " + empBToken))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/hr/self/leaves/applications/" + appBPubId + "/document")
+                        .header("Authorization", "Bearer " + empBToken))
+                .andExpect(status().isOk());
+
+        // Employee A (same hospital) CANNOT view, cancel, or download Employee B's leave or document
+        mockMvc.perform(get("/api/v1/hr/self/leaves/applications/" + appBPubId)
+                        .header("Authorization", "Bearer " + empAToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/hr/self/leaves/applications/" + appBPubId + "/cancel")
+                        .header("Authorization", "Bearer " + empAToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/hr/self/leaves/applications/" + appBPubId + "/document")
+                        .header("Authorization", "Bearer " + empAToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/hr/management/leaves/applications/" + appBPubId + "/document")
+                        .header("Authorization", "Bearer " + empAToken))
+                .andExpect(status().isForbidden());
+
+        // Unauthorized staff & viewer users CANNOT access management/approval APIs
+        mockMvc.perform(post("/api/v1/hr/management/leaves/types")
+                        .header("Authorization", "Bearer " + empAToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(medTypeReq)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/hr/management/leaves/balances/allocate")
+                        .header("Authorization", "Bearer " + empAToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new AllocateLeaveBalanceRequest(
+                                empBPubId, leaveTypePubId, year, BigDecimal.ONE, "Unauthorized"
+                        ))))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/hr/management/leaves/approvals/inbox")
+                        .header("Authorization", "Bearer " + empAToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/hr/management/leaves/applications/" + appBPubId + "/steps/1/approve")
+                        .header("Authorization", "Bearer " + empAToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/hr/management/leaves/applications/" + appBPubId + "/steps/1/reject")
+                        .header("Authorization", "Bearer " + empAToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RejectLeaveStepRequest("No", null))))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/hr/self/leaves/balances")
+                        .header("Authorization", "Bearer " + viewerToken))
+                .andExpect(status().isForbidden());
+
+        // Unassigned manager with HOSPITAL_LEAVES_APPROVE CANNOT approve Step 1 assigned to manager.alice
+        mockMvc.perform(post("/api/v1/hr/management/leaves/applications/" + appBPubId + "/steps/1/approve")
+                        .header("Authorization", "Bearer " + otherMgrToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testLeaveBalanceOptimisticLockingProtectsConcurrentUpdates() throws Exception {
+        CreateLeaveTypeRequest typeReq = new CreateLeaveTypeRequest(
+                "LOCK_TEST", "Lock Test Leave", "Concurrency test",
+                10, false, 0, false, 0, true,
+                LeaveApprovalWorkflowType.HR_ONLY, 1
+        );
+        MvcResult typeRes = mockMvc.perform(post("/api/v1/hr/management/leaves/types")
+                        .header("Authorization", "Bearer " + adminTokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(typeReq)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String leaveTypePubId = objectMapper.readTree(typeRes.getResponse().getContentAsString()).path("data").path("publicId").asText();
+
+        int year = LocalDate.now().getYear();
+        MvcResult allocRes = mockMvc.perform(post("/api/v1/hr/management/leaves/balances/allocate")
+                        .header("Authorization", "Bearer " + adminTokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new AllocateLeaveBalanceRequest(
+                                staffEmployeePubId, leaveTypePubId, year, BigDecimal.valueOf(10.0), "Init"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.version").value(0))
+                .andReturn();
+        String balancePubId = objectMapper.readTree(allocRes.getResponse().getContentAsString()).path("data").path("publicId").asText();
+
+        LeaveBalance staleSnapshot = leaveBalanceRepository.findByPublicIdAndHospitalId(balancePubId, hospitalA.getId())
+                .orElseThrow();
+
+        // Advance version in DB via legitimate adjustment (version increments on transaction commit/flush)
+        mockMvc.perform(post("/api/v1/hr/management/leaves/balances/" + balancePubId + "/adjust")
+                        .header("Authorization", "Bearer " + adminTokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new AdjustLeaveBalanceRequest(
+                                BigDecimal.valueOf(2.0), "Concurrent update"
+                        ))))
+                .andExpect(status().isOk());
+
+        LeaveBalance committed = leaveBalanceRepository.findByPublicIdAndHospitalId(balancePubId, hospitalA.getId())
+                .orElseThrow();
+        assertThat(committed.getVersion()).isEqualTo(1L);
+
+        // Attempting to persist stale snapshot must fail with optimistic locking exception
+        staleSnapshot.setPendingApprovalDays(BigDecimal.ONE);
+        assertThatThrownBy(() -> leaveBalanceRepository.saveAndFlush(staleSnapshot))
+                .isInstanceOf(ObjectOptimisticLockingFailureException.class);
     }
 }
